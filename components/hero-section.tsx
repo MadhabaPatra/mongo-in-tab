@@ -3,14 +3,28 @@
 import type React from "react";
 import { Button } from "@/components/ui/button";
 
-import { ArrowRight, Play, Terminal, AlertCircle, Info } from "lucide-react";
+import {
+  ArrowRight,
+  Play,
+  Terminal,
+  AlertCircle,
+  Info,
+  LoaderCircle,
+} from "lucide-react";
 import { useState, useRef } from "react";
 import { AnimatedBackground } from "@/components/animated-background";
 import { validateUrl } from "@/lib/utils";
+import { testMongoConnection } from "@/lib/mongodb";
+import { StorageManager } from "@/lib/storage";
+import { useRouter } from "next/navigation";
 
 export function HeroSection() {
+  const router = useRouter();
+
   const [mongoUrl, setMongoUrl] = useState("");
+  const [isConnecting, setIsConnecting] = useState(false);
   const [validationError, setValidationError] = useState("");
+
   const [isShaking, setIsShaking] = useState(false);
   const [activeTab, setActiveTab] = useState<"connect" | "formats">("connect");
 
@@ -24,22 +38,43 @@ export function HeroSection() {
     setValidationError(validationError);
   };
 
-  const handleConnect = () => {
+  const handleConnect = async () => {
     if (!!validationError || !mongoUrl.trim()) {
       setActiveTab("connect");
       setIsShaking(true);
       setTimeout(() => setIsShaking(false), 600);
       inputRef.current?.focus();
     } else {
-      console.log("Connecting to:", mongoUrl);
+      // Now Test the connection url
+      setIsConnecting(true);
+      try {
+        const response = await testMongoConnection(mongoUrl);
+
+        if (!response.success) {
+          setValidationError(response?.message || "Something went wrong");
+          setIsShaking(true);
+          setTimeout(() => setIsShaking(false), 600);
+          inputRef.current?.focus();
+        } else {
+          // Successfully connected
+          const addedConnection = StorageManager.addConnection(mongoUrl);
+
+          // Redirect to
+          router.push("/app/databases?connectionId=" + addedConnection);
+        }
+      } catch (e) {
+        setValidationError("Something went wrong, Please try agan later.");
+      } finally {
+        setIsConnecting(false);
+      }
     }
   };
 
   return (
-    <section className="relative min-h-[90vh] flex items-center justify-center overflow-hidden px-4 pt-20">
+    <section className="relative min-h-[90vh] flex items-center justify-center overflow-hidden p-4">
       <AnimatedBackground />
       <div className="relative z-10 container text-center max-w-5xl mx-auto">
-        <div className="space-y-8">
+        <div className="space-y-12">
           <h1 className="text-xl md:text-3xl lg:text-4xl font-mono font-bold tracking-tight leading-tight animate-fade-in-scale">
             Explore and Manage Your MongoDB
             <span className="block text-primary mt-2">
@@ -48,8 +83,7 @@ export function HeroSection() {
           </h1>
 
           <p className="font-mono text-lg md:text-xl text-muted-foreground max-w-3xl mx-auto leading-relaxed animate-fade-in-up animate-delay-200">
-            Paste your connection URL to instantly explore your collections{" "}
-            {"& "}
+            Instantly explore your collections {"& "}
             documents. all data stays{" "}
             <span className="block text-primary font-semibold">
               100% private—stored only in your browser.
@@ -231,20 +265,31 @@ export function HeroSection() {
               )}
             </div>
 
-            <div className="flex flex-col sm:flex-row gap-4 justify-center items-center animate-fade-in-up animate-delay-600">
+            <div className="flex flex-col sm:flex-row gap-4 justify-center items-center animate-fade-in-up animate-delay-600 pt-8">
               <Button
                 size="lg"
                 className="text-base px-8 py-6 h-14 group min-w-[180px] cursor-pointer"
                 onClick={handleConnect}
+                disabled={isConnecting}
               >
-                Connect Database
-                <ArrowRight className="ml-2 h-4 w-4 group-hover:translate-x-1 transition-transform" />
+                {!isConnecting ? (
+                  <>
+                    <ArrowRight className="ml-2 h-4 w-4 group-hover:translate-x-1 transition-transform" />
+                    <span>Connect Database</span>
+                  </>
+                ) : (
+                  <>
+                    <LoaderCircle className="ml-2 h-4 w-4 animate-spin" />
+                    <span>Connecting...</span>
+                  </>
+                )}
               </Button>
 
               <Button
                 variant="outline"
                 size="lg"
                 className="text-base px-8 py-6 h-14 group bg-background/80 backdrop-blur-sm min-w-[180px] cursor-pointer hover:bg-transparent hover:text-primary"
+                disabled={isConnecting}
               >
                 <Play className="mr-2 h-4 w-4 group-hover:scale-110 group-hover:text-primary transition-all" />
                 Try Sample Database
@@ -252,22 +297,22 @@ export function HeroSection() {
             </div>
           </div>
 
-          <div className="pt-4 animate-fade-in-up animate-delay-800">
-            <div className="flex flex-wrap justify-center gap-3">
-              <div className="inline-flex items-center px-3 py-1.5 bg-emerald-500/10 border border-emerald-500/20 text-emerald-600 text-sm font-medium rounded-md">
-                <div className="w-2 h-2 rounded-full bg-emerald-500 mr-2"></div>
-                Secure
-              </div>
-              <div className="inline-flex items-center px-3 py-1.5 bg-blue-500/10 border border-blue-500/20 text-blue-600 text-sm font-medium rounded-md">
-                <div className="w-2 h-2 rounded-full bg-blue-500 mr-2"></div>
-                Browser-based
-              </div>
-              <div className="inline-flex items-center px-3 py-1.5 bg-purple-500/10 border border-purple-500/20 text-purple-600 text-sm font-medium rounded-md">
-                <div className="w-2 h-2 rounded-full bg-purple-500 mr-2"></div>
-                No login required
-              </div>
-            </div>
-          </div>
+          {/*<div className="pt-4 animate-fade-in-up animate-delay-800">*/}
+          {/*  <div className="flex flex-wrap justify-center gap-3">*/}
+          {/*    <div className="inline-flex items-center px-3 py-1.5 bg-emerald-500/10 border border-emerald-500/20 text-emerald-600 text-sm font-medium rounded-md">*/}
+          {/*      <div className="w-2 h-2 rounded-full bg-emerald-500 mr-2"></div>*/}
+          {/*      Secure*/}
+          {/*    </div>*/}
+          {/*    <div className="inline-flex items-center px-3 py-1.5 bg-blue-500/10 border border-blue-500/20 text-blue-600 text-sm font-medium rounded-md">*/}
+          {/*      <div className="w-2 h-2 rounded-full bg-blue-500 mr-2"></div>*/}
+          {/*      Browser-based*/}
+          {/*    </div>*/}
+          {/*    <div className="inline-flex items-center px-3 py-1.5 bg-purple-500/10 border border-purple-500/20 text-purple-600 text-sm font-medium rounded-md">*/}
+          {/*      <div className="w-2 h-2 rounded-full bg-purple-500 mr-2"></div>*/}
+          {/*      No login required*/}
+          {/*    </div>*/}
+          {/*  </div>*/}
+          {/*</div>*/}
         </div>
       </div>
 
