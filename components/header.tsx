@@ -27,9 +27,11 @@ export function Header() {
           >
             Try Sample
           </Button>
-          <Button size="sm" className="">
-            Go to App
-          </Button>
+          <Link href="/app">
+            <Button size="sm" className="">
+              Go to App
+            </Button>
+          </Link>
         </div>
       </div>
     </header>
