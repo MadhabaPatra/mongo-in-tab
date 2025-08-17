@@ -1,5 +1,6 @@
 import { Database, Shield, Heart, Zap, Eye, Server } from "lucide-react";
 import Link from "next/link";
+import Image from "next/image";
 
 export function Footer() {
   return (
@@ -8,9 +9,11 @@ export function Footer() {
         <div className="grid grid-cols-1 lg:grid-cols-4 gap-16">
           <div className="lg:col-span-2 space-y-6">
             <Link href="/">
-              <div className="flex items-center gap-3">
-                <Database className="h-7 w-7 text-primary" />
-                <span className="font-mono text-xl font-bold">MongoInTab</span>
+              <div className="flex items-center gap-2">
+                <Image src={"/logo.png"} width="32" height="32" alt="logo" />
+                <span className="font-mono text-lg font-semibold">
+                  MongoInTab
+                </span>
               </div>
             </Link>
             <p className="text-muted-foreground leading-relaxed max-w-md pt-4">

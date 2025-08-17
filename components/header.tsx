@@ -1,7 +1,7 @@
 import { Button } from "@/components/ui/button";
-import { Database, ExternalLink, Star } from "lucide-react";
 import Link from "next/link";
 import { GitHubStarButton } from "@/components/github-star-button";
+import Image from "next/image";
 
 export function Header() {
   return (
@@ -9,7 +9,7 @@ export function Header() {
       <div className="flex h-16 items-center justify-between">
         <Link href="/">
           <div className="flex items-center gap-2">
-            <Database className="h-6 w-6 text-primary" />
+            <Image src={"/logo.png"} width="32" height="32" alt="logo" />
             <span className="font-mono text-lg font-semibold">MongoInTab</span>
           </div>
         </Link>
