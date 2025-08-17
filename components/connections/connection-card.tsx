@@ -5,14 +5,13 @@ import { Button } from "@/components/ui/button";
 
 import { formatTimestamp } from "@/lib/utils";
 import { useRouter } from "next/navigation";
-import { StorageManager } from "@/lib/storage";
 
 export function ConnectionCard({
   connection,
-  onClickRefresh,
+  clearConnectionById,
 }: {
   connection: IConnection;
-  onClickRefresh: () => void;
+  clearConnectionById: (id: string) => void;
 }) {
   const router = useRouter();
 
@@ -21,13 +20,7 @@ export function ConnectionCard({
   };
 
   const onClickRemove = (connection: IConnection) => {
-    const isDeleted = StorageManager.removeConnection(connection.id);
-    if (isDeleted) {
-      // Show a toaster message and refresh
-      onClickRefresh();
-    } else {
-      // Show a toaster message and loader
-    }
+    clearConnectionById(connection.id);
   };
 
   return (

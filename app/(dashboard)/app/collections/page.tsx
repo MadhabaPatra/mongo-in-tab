@@ -17,6 +17,7 @@ import {
 import { CollectionErrorState } from "@/components/collections/collection-error-state";
 import { CollectionEmptyState } from "@/components/collections/collection-empty-state";
 import { CollectionCard } from "@/components/collections/collection-card";
+import { AppHeader } from "@/components/app-header";
 
 export default function CollectionPage() {
   const router = useRouter();
@@ -144,101 +145,104 @@ export default function CollectionPage() {
   }
 
   return (
-    <div className="py-8 px-6 space-y-6">
-      <div className="flex items-center justify-between">
-        <div className="flex items-center gap-4">
-          <div className="flex items-center gap-2">
-            <Database className="h-5 w-5 text-primary" />
-            <span className="text-sm font-medium">Database:</span>
-            <Select
-              value={currentDatabase}
-              onValueChange={setCurrentDatabase}
-              disabled={isLoadingDatabases}
-            >
-              <SelectTrigger className="w-[200px] bg-background border-input">
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent>
-                {databases.map((db, i) => (
-                  <SelectItem
-                    key={i}
-                    value={db.name}
-                    className="hover:bg-primary/10 hover:text-primary cursor-pointer"
-                  >
-                    <div className="flex items-center justify-between w-full">
-                      <span className="font-mono">{db.name}</span>
-                      {/*<span className="text-xs font-mono ml-4 text-muted-foreground group-hover:text-white">*/}
-                      {/*  {db.collections} collections*/}
-                      {/*</span>*/}
-                    </div>
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
+    <div>
+      <AppHeader type={"collection"} />
+      <div className="py-8 px-6 space-y-6">
+        <div className="flex items-center justify-between">
+          <div className="flex items-center gap-4">
+            <div className="flex items-center gap-2">
+              <Database className="h-5 w-5 text-primary" />
+              <span className="text-sm font-medium">Database:</span>
+              <Select
+                value={currentDatabase}
+                onValueChange={setCurrentDatabase}
+                disabled={isLoadingDatabases}
+              >
+                <SelectTrigger className="w-[200px] bg-background border-input">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  {databases.map((db, i) => (
+                    <SelectItem
+                      key={i}
+                      value={db.name}
+                      className="hover:bg-primary/10 hover:text-primary cursor-pointer"
+                    >
+                      <div className="flex items-center justify-between w-full">
+                        <span className="font-mono">{db.name}</span>
+                        {/*<span className="text-xs font-mono ml-4 text-muted-foreground group-hover:text-white">*/}
+                        {/*  {db.collections} collections*/}
+                        {/*</span>*/}
+                      </div>
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
           </div>
         </div>
-      </div>
 
-      <div className="flex flex-col sm:flex-row gap-4">
-        <div className="relative flex-1">
-          <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-          <Input
-            placeholder="Search collection..."
-            value={searchTerm}
-            onChange={(e) => setSearchTerm(e.target.value)}
-            className="pl-10"
-          />
-        </div>
-      </div>
-
-      {/* Stats Cards */}
-      {/*{isLoadingStats ? (*/}
-      {/*  <DatabaseStatsSkeletonLoader />*/}
-      {/*) : (*/}
-      {/*  <DatabaseStats*/}
-      {/*    data={{*/}
-      {/*      totalDatabases: 0,*/}
-      {/*      totalCollections: 0,*/}
-      {/*      totalDocuments: 0,*/}
-      {/*    }}*/}
-      {/*  />*/}
-      {/*)}*/}
-
-      {/* Loading State */}
-      {isLoading ? (
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-          {[...Array(6)].map((_, i) => (
-            <Card key={i} className="animate-pulse">
-              <CardHeader className="pb-3">
-                <div className="h-4 bg-muted rounded w-3/4"></div>
-              </CardHeader>
-              <CardContent className="space-y-3">
-                <div className="h-3 bg-muted rounded w-1/2"></div>
-                <div className="h-3 bg-muted rounded w-2/3"></div>
-                <div className="h-3 bg-muted rounded w-1/3"></div>
-              </CardContent>
-            </Card>
-          ))}
-        </div>
-      ) : (
-        <>
-          {/* Collection Grid */}
-          {filteredCollections.length > 0 ? (
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-              {filteredCollections.map((collection, i) => (
-                <CollectionCard collection={collection} key={i} />
-              ))}
-            </div>
-          ) : (
-            <CollectionEmptyState
-              searchTerm={searchTerm}
-              clearSearch={() => {
-                setSearchTerm("");
-              }}
+        <div className="flex flex-col sm:flex-row gap-4">
+          <div className="relative flex-1">
+            <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+            <Input
+              placeholder="Search collection..."
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
+              className="pl-10"
             />
-          )}
-        </>
-      )}
+          </div>
+        </div>
+
+        {/* Stats Cards */}
+        {/*{isLoadingStats ? (*/}
+        {/*  <DatabaseStatsSkeletonLoader />*/}
+        {/*) : (*/}
+        {/*  <DatabaseStats*/}
+        {/*    data={{*/}
+        {/*      totalDatabases: 0,*/}
+        {/*      totalCollections: 0,*/}
+        {/*      totalDocuments: 0,*/}
+        {/*    }}*/}
+        {/*  />*/}
+        {/*)}*/}
+
+        {/* Loading State */}
+        {isLoading ? (
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+            {[...Array(6)].map((_, i) => (
+              <Card key={i} className="animate-pulse">
+                <CardHeader className="pb-3">
+                  <div className="h-4 bg-muted rounded w-3/4"></div>
+                </CardHeader>
+                <CardContent className="space-y-3">
+                  <div className="h-3 bg-muted rounded w-1/2"></div>
+                  <div className="h-3 bg-muted rounded w-2/3"></div>
+                  <div className="h-3 bg-muted rounded w-1/3"></div>
+                </CardContent>
+              </Card>
+            ))}
+          </div>
+        ) : (
+          <>
+            {/* Collection Grid */}
+            {filteredCollections.length > 0 ? (
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                {filteredCollections.map((collection, i) => (
+                  <CollectionCard collection={collection} key={i} />
+                ))}
+              </div>
+            ) : (
+              <CollectionEmptyState
+                searchTerm={searchTerm}
+                clearSearch={() => {
+                  setSearchTerm("");
+                }}
+              />
+            )}
+          </>
+        )}
+      </div>
     </div>
   );
 }

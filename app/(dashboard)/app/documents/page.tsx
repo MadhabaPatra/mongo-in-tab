@@ -31,6 +31,7 @@ import { FilterDocuments } from "@/components/documents/filter-documents";
 import { DocumentsPagination } from "@/components/documents/documents-pagination";
 import { DocumentsTableView } from "@/components/documents/documents-table-view";
 import { DocumentsEmptyState } from "@/components/documents/documents-empty-state";
+import { AppHeader } from "@/components/app-header";
 
 export default function DocumentsPage() {
   const router = useRouter();
@@ -187,151 +188,154 @@ export default function DocumentsPage() {
   }
 
   return (
-    <div className="py-8 px-6 space-y-6">
-      <div className="flex items-center justify-between">
-        <div className="flex items-center gap-4">
-          <div className="flex items-center gap-2">
-            <Database className="h-5 w-5 text-primary" />
-            <span className="text-sm font-medium">Collections:</span>
-            <Select
-              value={currentCollection}
-              onValueChange={setCurrentCollection}
-              disabled={isLoadingCollections}
-            >
-              <SelectTrigger className="w-[200px] bg-background border-input">
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent>
-                {collections.map((db, i) => (
-                  <SelectItem
-                    key={i}
-                    value={db.name}
-                    className="hover:bg-primary/10 hover:text-primary cursor-pointer"
-                  >
-                    <div className="flex items-center justify-between w-full">
-                      <span className="font-mono">{db.name}</span>
-                      {/*<span className="text-xs font-mono ml-4 text-muted-foreground group-hover:text-white">*/}
-                      {/*  {db.collections} collections*/}
-                      {/*</span>*/}
-                    </div>
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          </div>
-        </div>
-      </div>
-
-      {/*  Start from here*/}
-      {/* Controls */}
-      <div className="space-y-4">
-        <div className="flex flex-col sm:flex-row gap-4 items-start sm:items-center justify-between">
-          <FilterDocuments fields={fields} filterApplied={() => {}} />
-
-          {mongoQuery !== "{}" && mongoQuery.trim() && (
+    <div>
+      <AppHeader type={"document"} />
+      <div className="py-8 px-6 space-y-6">
+        <div className="flex items-center justify-between">
+          <div className="flex items-center gap-4">
             <div className="flex items-center gap-2">
-              <Badge className="font-mono text-xs">Active Filter</Badge>
-              <Button
-                variant="ghost"
-                size="sm"
-                onClick={() => {
-                  setMongoQuery("{}");
-                }}
-                className="h-6 w-6 p-0 hover:bg-transparent hover:text-destructive cursor-pointer"
+              <Database className="h-5 w-5 text-primary" />
+              <span className="text-sm font-medium">Collections:</span>
+              <Select
+                value={currentCollection}
+                onValueChange={setCurrentCollection}
+                disabled={isLoadingCollections}
               >
-                <X className="h-3 w-3" />
-              </Button>
-            </div>
-          )}
-
-          <div className="flex items-center gap-3">
-            <div className="flex items-center gap-2">
-              <Button
-                variant={viewMode === "table" ? "default" : "outline"}
-                size="sm"
-                onClick={() => setViewMode("table")}
-                className="cursor-pointer"
-              >
-                <List className="h-4 w-4" />
-              </Button>
-              <Button
-                variant={viewMode === "card" ? "default" : "outline"}
-                size="sm"
-                onClick={() => setViewMode("card")}
-                className="cursor-pointer"
-              >
-                <Grid className="h-4 w-4" />
-              </Button>
-            </div>
-
-            <div className="flex items-center gap-2">
-              <Select value={sortField} onValueChange={setSortField}>
-                <SelectTrigger className="w-[120px]">
-                  <SelectValue placeholder="Sort by" />
+                <SelectTrigger className="w-[200px] bg-background border-input">
+                  <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
-                  {fields.map((field) => (
-                    <SelectItem key={field} value={field}>
-                      {field}
+                  {collections.map((db, i) => (
+                    <SelectItem
+                      key={i}
+                      value={db.name}
+                      className="hover:bg-primary/10 hover:text-primary cursor-pointer"
+                    >
+                      <div className="flex items-center justify-between w-full">
+                        <span className="font-mono">{db.name}</span>
+                        {/*<span className="text-xs font-mono ml-4 text-muted-foreground group-hover:text-white">*/}
+                        {/*  {db.collections} collections*/}
+                        {/*</span>*/}
+                      </div>
                     </SelectItem>
                   ))}
                 </SelectContent>
               </Select>
-              <Button
-                variant="outline"
-                size="sm"
-                // onClick={() =>
-                //   setSortOrder(sortOrder === "asc" ? "desc" : "asc")
-                // }
-                className="cursor-pointer"
-              >
-                {sortOrder === "asc" ? (
-                  <ArrowUp className="h-4 w-4" />
-                ) : (
-                  <ArrowDown className="h-4 w-4" />
-                )}
-              </Button>
             </div>
           </div>
         </div>
 
-        {/* Pagination */}
-        <DocumentsPagination
-          pagination={pagination}
-          onPaginationChange={paginationChanged}
-        />
-      </div>
+        {/*  Start from here*/}
+        {/* Controls */}
+        <div className="space-y-4">
+          <div className="flex flex-col sm:flex-row gap-4 items-start sm:items-center justify-between">
+            {/*<FilterDocuments fields={fields} filterApplied={() => {}} />*/}
 
-      {/* Documents List */}
-      {isLoading ? (
-        <div className="space-y-2">
-          {[...Array(5)].map((_, i) => (
-            <Card key={i} className="animate-pulse">
-              <CardContent className="p-3">
-                <div className="flex items-center justify-between">
-                  <div className="space-y-2 flex-1">
-                    <div className="h-4 bg-muted rounded w-1/4"></div>
-                    <div className="h-3 bg-muted rounded w-1/2"></div>
-                  </div>
-                  <div className="h-8 w-20 bg-muted rounded"></div>
-                </div>
-              </CardContent>
-            </Card>
-          ))}
-        </div>
-      ) : documents.length > 0 ? (
-        viewMode === "table" ? (
-          <DocumentsTableView
-            documents={documents}
-            documentSelected={() => {}}
-            fields={fields}
+            {mongoQuery !== "{}" && mongoQuery.trim() && (
+              <div className="flex items-center gap-2">
+                <Badge className="font-mono text-xs">Active Filter</Badge>
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={() => {
+                    setMongoQuery("{}");
+                  }}
+                  className="h-6 w-6 p-0 hover:bg-transparent hover:text-destructive cursor-pointer"
+                >
+                  <X className="h-3 w-3" />
+                </Button>
+              </div>
+            )}
+
+            {/*<div className="flex items-center gap-3">*/}
+            {/*  <div className="flex items-center gap-2">*/}
+            {/*    <Button*/}
+            {/*      variant={viewMode === "table" ? "default" : "outline"}*/}
+            {/*      size="sm"*/}
+            {/*      onClick={() => setViewMode("table")}*/}
+            {/*      className="cursor-pointer"*/}
+            {/*    >*/}
+            {/*      <List className="h-4 w-4" />*/}
+            {/*    </Button>*/}
+            {/*    <Button*/}
+            {/*      variant={viewMode === "card" ? "default" : "outline"}*/}
+            {/*      size="sm"*/}
+            {/*      onClick={() => setViewMode("card")}*/}
+            {/*      className="cursor-pointer"*/}
+            {/*    >*/}
+            {/*      <Grid className="h-4 w-4" />*/}
+            {/*    </Button>*/}
+            {/*  </div>*/}
+
+            {/*  <div className="flex items-center gap-2">*/}
+            {/*    <Select value={sortField} onValueChange={setSortField}>*/}
+            {/*      <SelectTrigger className="w-[120px]">*/}
+            {/*        <SelectValue placeholder="Sort by" />*/}
+            {/*      </SelectTrigger>*/}
+            {/*      <SelectContent>*/}
+            {/*        {fields.map((field) => (*/}
+            {/*          <SelectItem key={field} value={field}>*/}
+            {/*            {field}*/}
+            {/*          </SelectItem>*/}
+            {/*        ))}*/}
+            {/*      </SelectContent>*/}
+            {/*    </Select>*/}
+            {/*    <Button*/}
+            {/*      variant="outline"*/}
+            {/*      size="sm"*/}
+            {/*      // onClick={() =>*/}
+            {/*      //   setSortOrder(sortOrder === "asc" ? "desc" : "asc")*/}
+            {/*      // }*/}
+            {/*      className="cursor-pointer"*/}
+            {/*    >*/}
+            {/*      {sortOrder === "asc" ? (*/}
+            {/*        <ArrowUp className="h-4 w-4" />*/}
+            {/*      ) : (*/}
+            {/*        <ArrowDown className="h-4 w-4" />*/}
+            {/*      )}*/}
+            {/*    </Button>*/}
+            {/*  </div>*/}
+            {/*</div>*/}
+          </div>
+
+          {/* Pagination */}
+          <DocumentsPagination
+            pagination={pagination}
+            onPaginationChange={paginationChanged}
           />
+        </div>
+
+        {/* Documents List */}
+        {isLoading ? (
+          <div className="space-y-2">
+            {[...Array(5)].map((_, i) => (
+              <Card key={i} className="animate-pulse">
+                <CardContent className="p-3">
+                  <div className="flex items-center justify-between">
+                    <div className="space-y-2 flex-1">
+                      <div className="h-4 bg-muted rounded w-1/4"></div>
+                      <div className="h-3 bg-muted rounded w-1/2"></div>
+                    </div>
+                    <div className="h-8 w-20 bg-muted rounded"></div>
+                  </div>
+                </CardContent>
+              </Card>
+            ))}
+          </div>
+        ) : documents.length > 0 ? (
+          viewMode === "table" ? (
+            <DocumentsTableView
+              documents={documents}
+              documentSelected={() => {}}
+              fields={fields}
+            />
+          ) : (
+            <div>Still in development.</div>
+          )
         ) : (
-          <div>Still in development.</div>
-        )
-      ) : (
-        <DocumentsEmptyState searchTerm={mongoQuery} />
-      )}
+          <DocumentsEmptyState searchTerm={mongoQuery} />
+        )}
+      </div>
     </div>
   );
 }

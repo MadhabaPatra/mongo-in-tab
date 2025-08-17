@@ -20,11 +20,11 @@ export function DatabaseCard({ database }: { database: IDatabase }) {
       className="hover:bg-muted/30 hover:border-primary/20 hover:shadow-sm transition-all duration-200 cursor-pointer border-muted/40 group relative"
       onClick={onClick}
     >
-      <div className="absolute inset-0 bg-primary/5 opacity-0 group-hover:opacity-100 transition-opacity duration-200 rounded-lg flex items-center justify-center">
-        <div className="bg-primary text-primary-foreground px-3 py-1.5 rounded-md text-sm font-medium shadow-lg">
-          Click to browse collections
-        </div>
-      </div>
+      {/*<div className="absolute inset-0 bg-primary/5 opacity-0 group-hover:opacity-100 transition-opacity duration-200 rounded-lg flex items-center justify-center">*/}
+      {/*  /!*<div className="bg-primary text-primary-foreground px-3 py-1.5 rounded-md text-sm font-medium shadow-lg">*!/*/}
+      {/*  /!*  Click to browse collections*!/*/}
+      {/*  /!*</div>*!/*/}
+      {/*</div>*/}
 
       <CardContent className="p-5 space-y-4">
         <div className="flex items-center gap-3">

@@ -5,12 +5,28 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Card, CardContent } from "@/components/ui/card";
-import { Database, History, Trash2, Info, RefreshCw } from "lucide-react";
+import {
+  Database,
+  History,
+  Trash2,
+  Info,
+  RefreshCw,
+  AlertCircle,
+} from "lucide-react";
 
 import { ConnectionCard } from "@/components/connections/connection-card";
 import { useRouter } from "next/navigation";
 import { StorageManager } from "@/lib/storage";
 import { testMongoConnection } from "@/lib/mongodb";
+import { Header } from "@/components/header";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
 
 export default function AppPage() {
   const [mongoUrl, setMongoUrl] = useState("");
@@ -20,18 +36,46 @@ export default function AppPage() {
   const router = useRouter();
 
   const [connections, setConnections] = useState<IConnection[]>([]);
+  const [isLoadingConnections, setIsLoadingConnections] = useState(false);
+
+  const [deleteConfirm, setDeleteConfirm] = useState<{
+    type: "single" | "all";
+    id?: string;
+  } | null>(null);
 
   useEffect(() => {
     setConnections(StorageManager.getConnections());
   }, []);
 
   const loadConnections = () => {
+    setIsLoadingConnections(true);
     setConnections(StorageManager.getConnections());
+    setIsLoadingConnections(false);
+  };
+
+  const handleConfirmDelete = () => {
+    setDeleteConfirm(null);
+    setIsLoadingConnections(true);
+
+    if (deleteConfirm?.type === "all") {
+      StorageManager.removeAllConnections();
+    } else if (deleteConfirm?.type === "single" && deleteConfirm.id) {
+      StorageManager.removeConnection(deleteConfirm.id);
+    }
+    loadConnections();
+    setIsLoadingConnections(false);
+  };
+
+  const handleCancelDelete = () => {
+    setDeleteConfirm(null);
   };
 
   const clearConnections = () => {
-    StorageManager.removeAllConnections();
-    loadConnections();
+    setDeleteConfirm({ type: "all" });
+  };
+
+  const clearConnectionById = (id: string) => {
+    setDeleteConfirm({ type: "single", id });
   };
 
   const handleConnect = async () => {
@@ -49,7 +93,7 @@ export default function AppPage() {
           const addedConnection = StorageManager.addConnection(mongoUrl);
 
           // Redirect to
-          router.push("/app/databases?id=" + addedConnection);
+          router.push("/app/databases?connectionId=" + addedConnection);
         }
       } catch (e) {
         setValidationError("Something went wrong, Please try agan later.");
@@ -61,6 +105,7 @@ export default function AppPage() {
 
   return (
     <div className="min-h-screen bg-background">
+      <Header />
       <main className="container mx-auto px-4 py-8 max-w-4xl">
         {/* Privacy Alert */}
         <Alert className="mb-8 border-blue-200 bg-blue-50/50">
@@ -117,6 +162,12 @@ export default function AppPage() {
                     Enter your MongoDB connection string to browse databases,
                     collections, and documents
                   </p>
+                  {validationError && (
+                    <Alert variant="destructive">
+                      <AlertCircle className="h-4 w-4" />
+                      <AlertDescription>{validationError}</AlertDescription>
+                    </Alert>
+                  )}
                 </div>
               </div>
             </div>
@@ -135,14 +186,14 @@ export default function AppPage() {
                 </span>
               </div>
               <div className="flex items-center gap-2">
-                <Button variant="outline" size="sm" onClick={clearConnections}>
+                <Button variant="outline" size="sm" onClick={loadConnections}>
                   <RefreshCw className="h-4 w-4 mr-2" />
                   Refresh all
                 </Button>
                 <Button
                   variant="outline"
                   size="sm"
-                  onClick={loadConnections}
+                  onClick={clearConnections}
                   className="text-destructive hover:bg-transparent hover:text-destructive cursor-pointer bg-transparent"
                 >
                   <Trash2 className="h-4 w-4 mr-2" />
@@ -156,7 +207,7 @@ export default function AppPage() {
                 <ConnectionCard
                   connection={connection}
                   key={i}
-                  onClickRefresh={loadConnections}
+                  clearConnectionById={clearConnectionById}
                 />
               ))}
             </div>
@@ -171,6 +222,34 @@ export default function AppPage() {
             <p className="text-sm">Your connection history will appear here</p>
           </div>
         )}
+
+        <Dialog
+          open={!!deleteConfirm}
+          onOpenChange={() => setDeleteConfirm(null)}
+        >
+          <DialogContent>
+            <DialogHeader>
+              <DialogTitle>
+                {deleteConfirm?.type === "all"
+                  ? "Clear All Connections?"
+                  : "Delete Connection?"}
+              </DialogTitle>
+              <DialogDescription>
+                {deleteConfirm?.type === "all"
+                  ? "This will remove all connection history from your browser. This action cannot be undone."
+                  : "This will remove this connection from your history. This action cannot be undone."}
+              </DialogDescription>
+            </DialogHeader>
+            <DialogFooter>
+              <Button variant="outline" onClick={handleCancelDelete}>
+                Cancel
+              </Button>
+              <Button variant="destructive" onClick={handleConfirmDelete}>
+                {deleteConfirm?.type === "all" ? "Clear All" : "Delete"}
+              </Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
       </main>
     </div>
   );

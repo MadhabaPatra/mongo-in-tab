@@ -1,6 +1,7 @@
 import { Button } from "@/components/ui/button";
 import { Database, ExternalLink, Star } from "lucide-react";
 import Link from "next/link";
+import { GitHubStarButton } from "@/components/github-star-button";
 
 export function Header() {
   return (
@@ -9,30 +10,16 @@ export function Header() {
         <Link href="/">
           <div className="flex items-center gap-2">
             <Database className="h-6 w-6 text-primary" />
-            <span className="font-mono text-lg font-semibold">
-              Mongo_in_tab
-            </span>
+            <span className="font-mono text-lg font-semibold">MongoInTab</span>
           </div>
         </Link>
 
         <div className="flex items-center gap-3">
-          <Button
-            variant="ghost"
-            size="sm"
-            className="cursor-pointer hover:bg-transparent hover:text-primary flex items-center gap-2"
-            asChild
-          >
-            <a
-              href="https://github.com/MadhabaPatra/mongo-in-tab"
-              target="_blank"
-              rel="noopener noreferrer"
-              className="flex items-center gap-2"
-            >
-              <Star className="h-4 w-4" />
-              <span className="text-sm font-medium">1.2k</span>
-              <ExternalLink className="h-3 w-3" />
-            </a>
-          </Button>
+          <GitHubStarButton
+            owner="MadhabaPatra"
+            repo="mongo-in-tab"
+            className="cursor-pointer"
+          />
           <Button
             variant="ghost"
             size="sm"

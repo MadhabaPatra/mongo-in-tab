@@ -21,6 +21,7 @@ import { StorageManager } from "@/lib/storage";
 import { useSearchParams } from "next/navigation";
 import { fetchDatabases } from "@/lib/mongodb";
 import { DatabaseEmptyState } from "@/components/database/database-empty-state";
+import { AppHeader } from "@/components/app-header";
 
 export default function DatabasesPage() {
   const searchParams = useSearchParams();
@@ -84,68 +85,71 @@ export default function DatabasesPage() {
   }
 
   return (
-    <div className="py-8 px-6 space-y-6">
-      <div className="flex flex-col sm:flex-row gap-4">
-        <div className="relative flex-1">
-          <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-          <Input
-            placeholder="Search databases..."
-            value={searchTerm}
-            onChange={(e) => setSearchTerm(e.target.value)}
-            className="pl-10"
-          />
-        </div>
-      </div>
-
-      {/* Stats Cards */}
-      {/*{isLoadingStats ? (*/}
-      {/*  <DatabaseStatsSkeletonLoader />*/}
-      {/*) : (*/}
-      {/*  <DatabaseStats*/}
-      {/*    data={{*/}
-      {/*      totalDatabases: 0,*/}
-      {/*      totalCollections: 0,*/}
-      {/*      totalDocuments: 0,*/}
-      {/*    }}*/}
-      {/*  />*/}
-      {/*)}*/}
-
-      {/* Loading State */}
-      {isLoading ? (
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-          {[...Array(6)].map((_, i) => (
-            <Card key={i} className="animate-pulse">
-              <CardHeader>
-                <div className="h-4 bg-gray-200 rounded w-3/4"></div>
-                <div className="h-3 bg-gray-200 rounded w-1/2"></div>
-              </CardHeader>
-              <CardContent>
-                <div className="space-y-2">
-                  <div className="h-3 bg-gray-200 rounded"></div>
-                  <div className="h-3 bg-gray-200 rounded w-2/3"></div>
-                </div>
-              </CardContent>
-            </Card>
-          ))}
-        </div>
-      ) : (
-        <>
-          {/* Database Grid */}
-          {filteredDatabases.length > 0 ? (
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-              {filteredDatabases.map((db, i) => (
-                <DatabaseCard database={db} key={i} />
-              ))}
-            </div>
-          ) : (
-            /* Empty State */
-            <DatabaseEmptyState
-              searchTerm={searchTerm}
-              clearSearch={() => setSearchTerm("")}
+    <div>
+      <AppHeader type={"database"} />
+      <div className="py-8 px-6 space-y-6">
+        <div className="flex flex-col sm:flex-row gap-4">
+          <div className="relative flex-1">
+            <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+            <Input
+              placeholder="Search databases..."
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
+              className="pl-10"
             />
-          )}
-        </>
-      )}
+          </div>
+        </div>
+
+        {/* Stats Cards */}
+        {/*{isLoadingStats ? (*/}
+        {/*  <DatabaseStatsSkeletonLoader />*/}
+        {/*) : (*/}
+        {/*  <DatabaseStats*/}
+        {/*    data={{*/}
+        {/*      totalDatabases: 0,*/}
+        {/*      totalCollections: 0,*/}
+        {/*      totalDocuments: 0,*/}
+        {/*    }}*/}
+        {/*  />*/}
+        {/*)}*/}
+
+        {/* Loading State */}
+        {isLoading ? (
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+            {[...Array(6)].map((_, i) => (
+              <Card key={i} className="animate-pulse">
+                <CardHeader>
+                  <div className="h-4 bg-gray-200 rounded w-3/4"></div>
+                  <div className="h-3 bg-gray-200 rounded w-1/2"></div>
+                </CardHeader>
+                <CardContent>
+                  <div className="space-y-2">
+                    <div className="h-3 bg-gray-200 rounded"></div>
+                    <div className="h-3 bg-gray-200 rounded w-2/3"></div>
+                  </div>
+                </CardContent>
+              </Card>
+            ))}
+          </div>
+        ) : (
+          <>
+            {/* Database Grid */}
+            {filteredDatabases.length > 0 ? (
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                {filteredDatabases.map((db, i) => (
+                  <DatabaseCard database={db} key={i} />
+                ))}
+              </div>
+            ) : (
+              /* Empty State */
+              <DatabaseEmptyState
+                searchTerm={searchTerm}
+                clearSearch={() => setSearchTerm("")}
+              />
+            )}
+          </>
+        )}
+      </div>
     </div>
   );
 }

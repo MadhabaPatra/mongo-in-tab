@@ -10,9 +10,7 @@ export function Footer() {
             <Link href="/">
               <div className="flex items-center gap-3">
                 <Database className="h-7 w-7 text-primary" />
-                <span className="font-mono text-xl font-bold">
-                  Mongo_in_tab
-                </span>
+                <span className="font-mono text-xl font-bold">MongoInTab</span>
               </div>
             </Link>
             <p className="text-muted-foreground leading-relaxed max-w-md pt-4">
@@ -100,7 +98,7 @@ export function Footer() {
 
         <div className="border-t mt-16 pt-8 flex flex-col md:flex-row justify-between items-center gap-6">
           <p className="text-sm text-muted-foreground font-mono">
-            © 2025 Mongo_in_tab • Built for developers.
+            © 2025 MongoInTab • Built for developers.
           </p>
           <div className="flex gap-8 text-sm">
             <a
