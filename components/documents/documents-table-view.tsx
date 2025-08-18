@@ -15,6 +15,7 @@ import {
   Eye,
   MoreHorizontal,
   Trash2,
+  X,
 } from "lucide-react";
 import {
   Dialog,
@@ -31,16 +32,36 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { copyToClipboard, getFieldType } from "@/lib/utils";
+import { toast } from "sonner";
+import { useState } from "react";
+import EditDocument from "@/components/documents/edit-documents";
 
 export function DocumentsTableView({
   fields,
   documents,
-  documentSelected,
+  handleSaveDocument,
 }: {
   fields: string[];
   documents: IDocument[];
-  documentSelected: (doc: IDocument) => void;
+  handleSaveDocument: (updatedDocument: IDocument) => Promise<void>;
 }) {
+  const [sidebarDocument, setSidebarDocument] = useState<IDocument | null>(
+    null,
+  );
+
+  const [sidebarOpen, setSidebarOpen] = useState(false);
+  const [editDocumentOpen, setEditDocumentOpen] = useState(false);
+
+  const handleOpenJsonSidebar = (doc: IDocument) => {
+    setSidebarDocument(doc);
+    setSidebarOpen(true);
+  };
+
+  const handleEditDocument = (doc: IDocument) => {
+    setSidebarDocument(doc);
+    setEditDocumentOpen(true);
+  };
+
   const displayAllFieldsExceptID = fields.filter((field) => field !== "_id");
 
   const renderCellValue = (value: any) => {
@@ -152,22 +173,23 @@ export function DocumentsTableView({
             </TableRow>
           </TableHeader>
           <TableBody>
-            {documents.map((doc) => (
-              <TableRow key={doc._id} className="hover:bg-muted/50">
+            {documents.map((doc, i) => (
+              <TableRow key={i} className="hover:bg-muted/50">
                 <TableCell className="sticky left-0 bg-background">
                   <div className="flex items-center gap-2">
                     <code className="text-xs font-mono bg-muted px-2 py-1 rounded">
                       {(() => {
-                        const cleanId = doc._id
-                          .replace("ObjectId('", "")
-                          .replace("')", "");
+                        const cleanId = doc._id;
                         return `${cleanId.slice(0, 3)}...${cleanId.slice(-3)}`;
                       })()}
                     </code>
                     <Button
                       variant="ghost"
                       size="sm"
-                      onClick={() => copyToClipboard(doc._id)}
+                      onClick={() => {
+                        copyToClipboard(doc._id);
+                        toast.success("Copied");
+                      }}
                       className="h-7 w-7 p-0 hover:bg-transparent hover:text-primary"
                     >
                       <Copy className="h-3 w-3" />
@@ -188,30 +210,14 @@ export function DocumentsTableView({
                 ))}
                 <TableCell className="sticky right-0 bg-background z-30 pointer-events-auto">
                   <div className="flex items-center gap-1 relative z-40 pointer-events-auto">
-                    <Dialog>
-                      <DialogTrigger asChild>
-                        <Button
-                          variant="ghost"
-                          size="sm"
-                          onClick={() => documentSelected(doc)}
-                          className="h-7 w-7 p-0 hover:bg-transparent hover:text-primary cursor-pointer relative z-50 pointer-events-auto"
-                        >
-                          <Eye className="h-3 w-3" />
-                        </Button>
-                      </DialogTrigger>
-                      <DialogContent className="max-w-2xl max-h-[80vh] overflow-auto">
-                        <DialogHeader>
-                          <DialogTitle className="font-mono">
-                            Document Details
-                          </DialogTitle>
-                        </DialogHeader>
-                        <div className="space-y-4">
-                          <pre className="bg-muted p-4 rounded-lg text-sm overflow-auto">
-                            {JSON.stringify(doc, null, 2)}
-                          </pre>
-                        </div>
-                      </DialogContent>
-                    </Dialog>
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      onClick={() => handleOpenJsonSidebar(doc)}
+                      className="h-7 w-7 p-0 hover:bg-transparent hover:text-primary cursor-pointer relative z-50 pointer-events-auto"
+                    >
+                      <Eye className="h-3 w-3" />
+                    </Button>
                     <DropdownMenu>
                       <DropdownMenuTrigger asChild>
                         <Button
@@ -223,15 +229,23 @@ export function DocumentsTableView({
                         </Button>
                       </DropdownMenuTrigger>
                       <DropdownMenuContent align="end">
-                        Still in development
-                        {/*<DropdownMenuItem className="cursor-pointer">*/}
-                        {/*  <Edit className="h-4 w-4 mr-2" />*/}
-                        {/*  Edit Document*/}
-                        {/*</DropdownMenuItem>*/}
-                        {/*<DropdownMenuItem className="cursor-pointer">*/}
-                        {/*  <Copy className="h-4 w-4 mr-2" />*/}
-                        {/*  Duplicate*/}
-                        {/*</DropdownMenuItem>*/}
+                        <DropdownMenuItem
+                          className="cursor-pointer"
+                          onClick={() => handleEditDocument(doc)}
+                        >
+                          <Edit className="h-4 w-4 mr-2" />
+                          Edit Document
+                        </DropdownMenuItem>
+                        <DropdownMenuItem
+                          className="cursor-pointer"
+                          onClick={() => {
+                            copyToClipboard(JSON.stringify(doc));
+                            toast.success("Copied");
+                          }}
+                        >
+                          <Copy className="h-4 w-4 mr-2" />
+                          Copy
+                        </DropdownMenuItem>
                         {/*<DropdownMenuItem className="cursor-pointer">*/}
                         {/*  <Download className="h-4 w-4 mr-2" />*/}
                         {/*  Export JSON*/}
@@ -250,6 +264,63 @@ export function DocumentsTableView({
           </TableBody>
         </Table>
       </div>
+      {sidebarOpen && (
+        <div className="fixed inset-0 z-50 flex bg-[rgb(15_23_42)]/80">
+          <div className="flex-1 " onClick={() => setSidebarOpen(false)} />
+          <div className="w-1/2 bg-white shadow-xl overflow-hidden flex flex-col">
+            <div className="p-4 border-b bg-gray-50">
+              <div className="flex items-center justify-between">
+                <div>
+                  <h3 className="text-lg font-semibold text-gray-800">
+                    Document JSON
+                  </h3>
+                  <p className="text-sm text-gray-600 font-json">
+                    {sidebarDocument?._id}
+                  </p>
+                </div>
+                <div className="flex items-center gap-2">
+                  <Button
+                    className={"cursor-pointer"}
+                    variant="outline"
+                    size="sm"
+                    onClick={() => {
+                      copyToClipboard(JSON.stringify(sidebarDocument, null, 2));
+                      toast("Copied to clipboard");
+                    }}
+                  >
+                    <Copy className="h-4 w-4 mr-2" />
+                    Copy
+                  </Button>
+                  <Button
+                    className={"cursor-pointer"}
+                    variant="ghost"
+                    size="sm"
+                    onClick={() => setSidebarOpen(false)}
+                  >
+                    <X className="h-4 w-4" />
+                  </Button>
+                </div>
+              </div>
+            </div>
+            <div className="flex-1 overflow-auto p-4">
+              <pre className="bg-gray-50 p-4 rounded-lg text-sm font-json whitespace-pre-wrap">
+                {JSON.stringify(sidebarDocument, null, 2)}
+              </pre>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {editDocumentOpen ? "True" : "False"}
+
+      {sidebarDocument && (
+        <EditDocument
+          document={sidebarDocument}
+          isOpen={editDocumentOpen}
+          onClose={() => setEditDocumentOpen(false)}
+          onSave={handleSaveDocument}
+        />
+      )}
     </Card>
   );
 }

@@ -27,6 +27,7 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
+import { toast } from "sonner";
 
 export default function AppPage() {
   const [mongoUrl, setMongoUrl] = useState("");
@@ -59,8 +60,10 @@ export default function AppPage() {
 
     if (deleteConfirm?.type === "all") {
       StorageManager.removeAllConnections();
+      toast.success("All connections have been removed from the browser!.");
     } else if (deleteConfirm?.type === "single" && deleteConfirm.id) {
       StorageManager.removeConnection(deleteConfirm.id);
+      toast.success("Removed successfully from the browser!");
     }
     loadConnections();
     setIsLoadingConnections(false);

@@ -1,6 +1,6 @@
 "use server";
 
-import { MongoClient } from "mongodb";
+import { MongoClient, ObjectId } from "mongodb";
 
 /**
  * Test MongoDB connection
@@ -220,10 +220,15 @@ export async function fetchDocuments(
     return {
       success: true,
       data: {
-        documents: documents.map((doc) => ({
-          ...doc,
-          _id: doc._id.toString(),
-        })),
+        documents: JSON.parse(
+          JSON.stringify(documents, (key, value) =>
+            value instanceof Date
+              ? value.toISOString()
+              : value && value._bsontype === "ObjectId"
+                ? value.toString()
+                : value,
+          ),
+        ),
         fields: fields[0].allKeys,
         pagination: {
           currentPage: page,
@@ -243,6 +248,75 @@ export async function fetchDocuments(
     return {
       success: false,
       message: errorMessage,
+    };
+  }
+}
+
+function serialize(doc: any) {
+  return JSON.parse(
+    JSON.stringify(doc, (key, value) =>
+      value instanceof Date
+        ? value.toISOString()
+        : value && value._bsontype === "ObjectId"
+          ? value.toString()
+          : value,
+    ),
+  );
+}
+
+export async function saveADocument(
+  connectionUrl?: string | undefined,
+  databaseName?: string | null,
+  collectionName?: string | null,
+  id?: string | ObjectId,
+  update?: Record<string, any>,
+): Promise<{
+  success: boolean;
+  data?: any;
+  message?: string;
+}> {
+  let client: MongoClient | undefined;
+
+  try {
+    if (!connectionUrl || !databaseName || !collectionName || !id) {
+      throw new Error(
+        "connectionUrl, databaseName, collectionName, and id are required",
+      );
+    }
+
+    client = new MongoClient(connectionUrl, { serverSelectionTimeoutMS: 5000 });
+    await client.connect();
+
+    const db = client.db(databaseName);
+    const collection = db.collection(collectionName);
+
+    const objectId = typeof id === "string" ? new ObjectId(id) : id;
+
+    const result = await collection.findOneAndUpdate(
+      { _id: objectId },
+      { $set: update },
+      { returnDocument: "after", upsert: false },
+    );
+
+    await client.close();
+
+    if (!result) {
+      throw new Error("Failed to save the document");
+    }
+
+    return {
+      success: true,
+      data: result.value ? serialize(result.value) : null,
+    };
+  } catch (error: any) {
+    if (client) {
+      try {
+        await client.close();
+      } catch (_) {}
+    }
+    return {
+      success: false,
+      message: error?.message,
     };
   }
 }

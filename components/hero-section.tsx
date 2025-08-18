@@ -17,6 +17,9 @@ import { validateUrl } from "@/lib/utils";
 import { testMongoConnection } from "@/lib/mongodb";
 import { StorageManager } from "@/lib/storage";
 import { useRouter } from "next/navigation";
+import Image from "next/image";
+import Link from "next/link";
+import { PeerlistLaunchBadge } from "@/components/peerlist-launch-badge";
 
 export function HeroSection() {
   const router = useRouter();
@@ -70,10 +73,16 @@ export function HeroSection() {
     }
   };
 
+  const onClickSampleDatabase = () => {
+    const connection = StorageManager.loadSampleConnection();
+    router.push("/app/databases?connectionId=" + connection);
+  };
+
   return (
     <section className="relative min-h-[90vh] flex items-center justify-center overflow-hidden p-4">
       <AnimatedBackground />
       <div className="relative z-10 container text-center max-w-5xl mx-auto">
+        <PeerlistLaunchBadge />
         <div className="space-y-12">
           <h1 className="text-xl md:text-3xl lg:text-4xl font-mono font-bold tracking-tight leading-tight animate-fade-in-scale">
             Explore and Manage Your MongoDB
@@ -177,6 +186,7 @@ export function HeroSection() {
                           target.style.height = target.scrollHeight + "px";
                         }}
                         autoFocus
+                        onKeyDown={(e) => e.key === "Enter" && handleConnect()}
                       />
 
                       {/*<input*/}
@@ -290,6 +300,7 @@ export function HeroSection() {
                 size="lg"
                 className="text-base px-8 py-6 h-14 group bg-background/80 backdrop-blur-sm min-w-[180px] cursor-pointer hover:bg-transparent hover:text-primary"
                 disabled={isConnecting}
+                onClick={onClickSampleDatabase}
               >
                 <Play className="mr-2 h-4 w-4 group-hover:scale-110 group-hover:text-primary transition-all" />
                 Try Sample Database

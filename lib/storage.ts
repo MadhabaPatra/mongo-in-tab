@@ -39,6 +39,44 @@ export class StorageManager {
     }
   }
 
+  static loadSampleConnection(): string {
+    try {
+      const connections = this.getConnections();
+
+      const url = process.env.NEXT_PUBLIC_SAMPLE_MONGODB_URI;
+
+      if (!url) {
+        throw new Error(`Failed to load sample database`);
+      }
+
+      const index = connections.findIndex((conn) => conn.url === url);
+
+      const connection: IConnection = {
+        id: "sample",
+        url: url,
+        name: "Sample Connection",
+        lastUsed: new Date(),
+      };
+
+      if (index >= 0) {
+        connections[index] = connection;
+      } else {
+        connections.unshift(connection);
+      }
+
+      // Keep only last 10 connections
+      const limitedConnections = connections.slice(0, 10);
+      localStorage.setItem(
+        STORAGE_KEYS.CONNECTIONS,
+        JSON.stringify(limitedConnections),
+      );
+
+      return connection.id;
+    } catch (error) {
+      throw error;
+    }
+  }
+
   // Connections
   static getConnections(): IConnection[] {
     try {

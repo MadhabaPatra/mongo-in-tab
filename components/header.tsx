@@ -1,9 +1,20 @@
+"use client";
+
 import { Button } from "@/components/ui/button";
 import Link from "next/link";
 import { GitHubStarButton } from "@/components/github-star-button";
 import Image from "next/image";
+import { StorageManager } from "@/lib/storage";
+import { useRouter } from "next/navigation";
 
 export function Header() {
+  const router = useRouter();
+  const onClickSampleDatabase = () => {
+    const connection = StorageManager.loadSampleConnection();
+
+    router.push("/app/databases?connectionId=" + connection);
+  };
+
   return (
     <header className="sticky top-0 z-50 w-full border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60 px-6">
       <div className="flex h-16 items-center justify-between">
@@ -24,6 +35,7 @@ export function Header() {
             variant="ghost"
             size="sm"
             className="hover:bg-transparent hover:text-primary"
+            onClick={onClickSampleDatabase}
           >
             Try Sample
           </Button>

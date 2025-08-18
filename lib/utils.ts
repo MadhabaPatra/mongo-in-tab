@@ -7,7 +7,7 @@ export function cn(...inputs: ClassValue[]) {
 
 export function validateUrl(url: string) {
   if (!url.trim()) {
-    return "";
+    return "Please enter a valid MongoDB connection string";
   }
 
   if (url.includes("localhost") || url.includes("127.0.0.1")) {

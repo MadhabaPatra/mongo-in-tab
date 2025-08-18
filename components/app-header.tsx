@@ -105,22 +105,13 @@ export function AppHeader({ type }: { type: string }) {
             </div>
           </div>
           <div className="flex items-center gap-2">
-            <Button
-              variant="ghost"
-              size="sm"
-              asChild
-              className="hover:bg-transparent hover:text-primary cursor-pointer"
-            >
+            <Button variant="outline" size="sm" asChild>
               <Link href="/app">
                 <LogOut className="h-4 w-4 mr-2" />
                 Disconnect
               </Link>
             </Button>
-            <Button
-              onClick={() => handleRefresh()}
-              size="sm"
-              className="cursor-pointer"
-            >
+            <Button variant="outline" onClick={() => handleRefresh()} size="sm">
               <RefreshCw className={`h-4 w-4 mr-2`} />
               Refresh
             </Button>

@@ -15,7 +15,7 @@ import { Card, CardContent } from "@/components/ui/card";
 
 import { StorageManager } from "@/lib/storage";
 import { useRouter, useSearchParams } from "next/navigation";
-import { fetchCollections, fetchDocuments } from "@/lib/mongodb";
+import { fetchCollections, fetchDocuments, saveADocument } from "@/lib/mongodb";
 import {
   Select,
   SelectContent,
@@ -32,6 +32,7 @@ import { DocumentsPagination } from "@/components/documents/documents-pagination
 import { DocumentsTableView } from "@/components/documents/documents-table-view";
 import { DocumentsEmptyState } from "@/components/documents/documents-empty-state";
 import { AppHeader } from "@/components/app-header";
+import { toast } from "sonner";
 
 export default function DocumentsPage() {
   const router = useRouter();
@@ -174,6 +175,44 @@ export default function DocumentsPage() {
 
   const filterApplied = () => {
     alert("triggered");
+  };
+
+  const handleSaveDocument = async (updatedDocument: IDocument) => {
+    try {
+      if (!connectionId) {
+        toast.error("Connection id is missing");
+        return;
+      }
+
+      const connectionData: IConnection | undefined =
+        StorageManager.getConnectionDetails(connectionId);
+
+      if (!connectionData?.url) {
+        toast.error("Invalid connection id entered");
+        return;
+      }
+
+      const response = await saveADocument(
+        connectionData.url,
+        database,
+        currentCollection,
+        updatedDocument._id,
+        updatedDocument,
+      );
+
+      if (response?.success) {
+        setDocuments(
+          documents.map((doc) =>
+            doc._id === response.data._id ? response.data : doc,
+          ),
+        );
+        toast.error("Saved");
+      } else {
+        toast.error("Failed to save the document:" + response.message);
+      }
+    } catch (e) {
+      toast.error("Failed to save the document");
+    }
   };
 
   const paginationChanged = (limit: number, pageNo: number) => {
@@ -326,7 +365,7 @@ export default function DocumentsPage() {
           viewMode === "table" ? (
             <DocumentsTableView
               documents={documents}
-              documentSelected={() => {}}
+              handleSaveDocument={handleSaveDocument}
               fields={fields}
             />
           ) : (
