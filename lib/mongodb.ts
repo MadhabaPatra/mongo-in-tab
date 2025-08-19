@@ -306,7 +306,7 @@ export async function saveADocument(
 
     return {
       success: true,
-      data: result.value ? serialize(result.value) : null,
+      data: serialize(result),
     };
   } catch (error: any) {
     if (client) {

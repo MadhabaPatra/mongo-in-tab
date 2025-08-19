@@ -84,8 +84,8 @@ export function AppHeader({ type }: { type: string }) {
             <div className="flex items-center gap-3">
               <Server className="h-5 w-5 text-primary" />
               <div className="flex flex-col gap-1">
-                <p className="font-mono font-semibold text-base">
-                  {currentConnection?.url}
+                <p className="font-mono font-semibold text-base truncate max-w-xl">
+                  {currentConnection?.name}
                 </p>
                 <div className="text-xs text-muted-foreground flex items-center gap-1">
                   Local storage #ID: {currentConnection?.id}
