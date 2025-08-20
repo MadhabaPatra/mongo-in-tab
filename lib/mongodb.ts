@@ -148,6 +148,31 @@ export async function fetchCollections(
   }
 }
 
+function serializeDocument(doc: any) {
+  return JSON.parse(
+    JSON.stringify(doc, (key, value) => {
+      if (value instanceof Date) {
+        return value.toISOString();
+      }
+      if (value && value._bsontype) {
+        switch (value._bsontype) {
+          case "ObjectId":
+            return value.toString();
+          case "UUID":
+            return value.toString();
+          case "Binary":
+            return value.buffer?.toString("base64"); // or hex if you prefer
+          case "Decimal128":
+            return value.toString();
+          default:
+            return value.toString(); // fallback
+        }
+      }
+      return value;
+    }),
+  );
+}
+
 export async function fetchDocuments(
   connectionUrl: string,
   databaseName: string,
@@ -164,13 +189,18 @@ export async function fetchDocuments(
   };
   message?: string;
 }> {
-  let client;
+  let client: MongoClient | null = null;
+
   try {
+    // Validate inputs
     if (!connectionUrl || !databaseName || !collectionName) {
       throw new Error(
         "Connection URL, database name, and collection name are required",
       );
     }
+
+    if (page < 1) page = 1;
+    if (limit < 1) limit = 20;
 
     client = new MongoClient(connectionUrl, {
       serverSelectionTimeoutMS: 10000,
@@ -183,21 +213,38 @@ export async function fetchDocuments(
     const collection = database.collection(collectionName);
 
     // Build search query
-    let query = {};
-
-    // TODO
+    let query: Record<string, any> = {};
     if (search) {
-      query = {};
+      // If collection has a text index, $text will work
+      query = { $text: { $search: search } };
+
+      // Fallback if no text index → regex search in all string fields
+      try {
+        await collection.indexInformation(); // check if text index exists
+      } catch {
+        query = {
+          $or: [
+            { _id: { $regex: search, $options: "i" } }, // try id string match
+          ],
+        };
+      }
     }
 
-    // Get total count for pagination
-    const totalDocuments = search
-      ? await collection.countDocuments(query)
-      : await collection.estimatedDocumentCount();
+    // Get total count
+    let totalDocuments = 0;
+    try {
+      totalDocuments = await collection.countDocuments(query);
+    } catch {
+      // Fallback if query invalid
+      totalDocuments = await collection.estimatedDocumentCount();
+    }
 
-    // Calculate pagination
+    // Pagination calculations
+    const totalPages =
+      totalDocuments > 0 ? Math.ceil(totalDocuments / limit) : 1;
+    if (page > totalPages) page = totalPages;
+
     const skip = (page - 1) * limit;
-    const totalPages = Math.ceil(totalDocuments / limit);
 
     // Fetch documents
     const documents = await collection
@@ -206,49 +253,62 @@ export async function fetchDocuments(
       .limit(limit)
       .toArray();
 
-    const fields = await collection
-      .aggregate([
-        { $sample: { size: 1000 } }, // randomly sample docs
-        { $project: { fields: { $objectToArray: "$$ROOT" } } },
-        { $unwind: "$fields" },
-        { $group: { _id: null, allKeys: { $addToSet: "$fields.k" } } },
-      ])
-      .toArray();
+    // Extract fields
+    let fields: string[] = [];
+    try {
+      const fieldAgg = await collection
+        .aggregate([
+          { $sample: { size: 500 } }, // limit sample size for perf
+          { $project: { fields: { $objectToArray: "$$ROOT" } } },
+          { $unwind: "$fields" },
+          { $group: { _id: null, allKeys: { $addToSet: "$fields.k" } } },
+        ])
+        .toArray();
 
-    await client.close();
+      fields = fieldAgg.length > 0 ? fieldAgg[0].allKeys : [];
+    } catch (err) {
+      console.warn("Could not extract fields:", err);
+    }
+
+    const serializedDocs = documents.map(serializeDocument);
 
     return {
       success: true,
       data: {
-        documents: JSON.parse(
-          JSON.stringify(documents, (key, value) =>
-            value instanceof Date
-              ? value.toISOString()
-              : value && value._bsontype === "ObjectId"
-                ? value.toString()
-                : value,
-          ),
-        ),
-        fields: fields[0].allKeys,
+        documents: serializedDocs,
+        fields,
         pagination: {
-          currentPage: page,
-          totalPages,
+          currentPage: totalDocuments > 0 ? page : 0,
+          totalPages: totalDocuments > 0 ? totalPages : 0,
           totalDocuments,
-          start: skip + 1,
-          end: skip + documents.length,
+          start: totalDocuments > 0 ? skip + 1 : 0,
+          end: totalDocuments > 0 ? skip + documents.length : 0,
         },
       },
     };
   } catch (error: any) {
-    console.error("MongoDB connection error:", error);
+    console.error("MongoDB operation error:", error);
 
-    let errorMessage = "Failed to connect to MongoDB";
+    let errorMessage = "Failed to fetch documents";
+    if (error.message?.includes("ECONNREFUSED")) {
+      errorMessage = "Could not connect to MongoDB server";
+    } else if (error.message?.includes("auth")) {
+      errorMessage = "Authentication failed for MongoDB";
+    }
 
-    // Return error instead of throwing to handle in component
     return {
       success: false,
       message: errorMessage,
     };
+  } finally {
+    // Ensure cleanup
+    if (client) {
+      try {
+        await client.close();
+      } catch (closeErr) {
+        console.warn("MongoDB client close error:", closeErr);
+      }
+    }
   }
 }
 
@@ -306,7 +366,7 @@ export async function saveADocument(
 
     return {
       success: true,
-      data: result.value ? serialize(result.value) : null,
+      data: serialize(result),
     };
   } catch (error: any) {
     if (client) {

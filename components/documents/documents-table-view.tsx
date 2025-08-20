@@ -1,3 +1,5 @@
+"use client";
+
 import { Card } from "@/components/ui/card";
 import {
   Table,
@@ -36,15 +38,21 @@ import { toast } from "sonner";
 import { useState } from "react";
 import EditDocument from "@/components/documents/edit-documents";
 
-export function DocumentsTableView({
-  fields,
-  documents,
-  handleSaveDocument,
-}: {
+interface DocumentsTableViewProps {
+  connectionId: string;
+  database: string;
+  collectionName: string;
   fields: string[];
   documents: IDocument[];
-  handleSaveDocument: (updatedDocument: IDocument) => Promise<void>;
-}) {
+}
+
+export function DocumentsTableView({
+  connectionId,
+  database,
+  collectionName,
+  fields,
+  documents,
+}: DocumentsTableViewProps) {
   const [sidebarDocument, setSidebarDocument] = useState<IDocument | null>(
     null,
   );
@@ -311,14 +319,25 @@ export function DocumentsTableView({
         </div>
       )}
 
-      {editDocumentOpen ? "True" : "False"}
-
       {sidebarDocument && (
         <EditDocument
           document={sidebarDocument}
+          connectionId={connectionId}
+          database={database}
+          collectionName={collectionName}
           isOpen={editDocumentOpen}
-          onClose={() => setEditDocumentOpen(false)}
-          onSave={handleSaveDocument}
+          onClose={() => {
+            setSidebarDocument(null);
+            setEditDocumentOpen(false);
+          }}
+          onSave={(updatedDocument: any) => {
+            setSidebarDocument(null);
+            setEditDocumentOpen(false);
+            // TODO
+            // documents = documents.map((doc) =>
+            //   doc._id === updatedDocument._id ? updatedDocument : doc,
+            // );
+          }}
         />
       )}
     </Card>
