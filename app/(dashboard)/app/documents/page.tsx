@@ -23,7 +23,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { CollectionErrorState } from "@/components/collections/collection-error-state";
+import { DocumentErrorState } from "@/components/documents/document-error-state";
 
 import { Button } from "@/components/ui/button";
 
@@ -185,7 +185,7 @@ export default function DocumentsPage() {
   // Error State
   if (error) {
     return (
-      <CollectionErrorState errorMessage={error} onClickRefresh={() => {}} />
+      <DocumentErrorState errorMessage={error} onClickRefresh={() => {}} />
     );
   }
 
@@ -301,10 +301,12 @@ export default function DocumentsPage() {
           </div>
 
           {/* Pagination */}
-          <DocumentsPagination
-            pagination={pagination}
-            onPaginationChange={paginationChanged}
-          />
+          {pagination?.totalDocuments > 0 && (
+            <DocumentsPagination
+              pagination={pagination}
+              onPaginationChange={paginationChanged}
+            />
+          )}
         </div>
 
         {/* Documents List */}
