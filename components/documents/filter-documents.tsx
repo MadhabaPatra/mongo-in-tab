@@ -9,168 +9,238 @@ import {
   DialogTrigger,
 } from "@/components/ui/dialog";
 import { useState } from "react";
-import { Filter, X } from "lucide-react";
+import { Filter, X, Search } from "lucide-react";
 import { Textarea } from "@/components/ui/textarea";
+import { Input } from "@/components/ui/input";
+
+interface FilterDocumentsProps {
+  fields: string[];
+  onFilterApplied: (query: string) => void;
+  currentFilter?: string;
+}
 
 export function FilterDocuments({
   fields,
-  filterApplied,
-}: {
-  fields: string[];
-  filterApplied: () => void;
-}) {
-  const [isFilterModalOpen, setIsFilterModalOpen] = useState(false);
-  const [cursorPosition, setCursorPosition] = useState(0);
-  const [query, setQuery] = useState("{}");
+  onFilterApplied,
+  currentFilter = "{}",
+}: FilterDocumentsProps) {
+  const [isOpen, setIsOpen] = useState(false);
+  const [query, setQuery] = useState(currentFilter);
+  const [searchField, setSearchField] = useState("");
+  const [isValidQuery, setIsValidQuery] = useState(true);
 
-  const [showSuggestions, setShowSuggestions] = useState(false);
-  const [filteredSuggestions, setFilteredSuggestions] = useState<string[]>([]);
+  // Filter available fields based on search
+  const filteredFields = fields.filter((field) =>
+    field.toLowerCase().includes(searchField.toLowerCase()),
+  );
 
-  // Handle query change
-  const handleQueryChange = (value: string) => {
-    setQuery(value);
-
-    // Get current word being typed
-    const beforeCursor = value.slice(0, cursorPosition);
-    const afterCursor = value.slice(cursorPosition);
-    const currentWord = beforeCursor.split(/[\s"':,{}[\]()]/).pop() || "";
-
-    if (currentWord.length > 0) {
-      const suggestions = fields.filter((field) =>
-        field.toLowerCase().includes(currentWord.toLowerCase()),
-      );
-      setFilteredSuggestions(suggestions);
-      setShowSuggestions(suggestions.length > 0);
-    } else {
-      setShowSuggestions(false);
+  // Validate JSON query
+  const validateQuery = (queryString: string) => {
+    try {
+      JSON.parse(queryString);
+      setIsValidQuery(true);
+    } catch {
+      setIsValidQuery(false);
     }
   };
 
-  const insertSuggestion = (field: string) => {
-    const beforeCursor = query.slice(0, cursorPosition);
-    const afterCursor = query.slice(cursorPosition);
-    const words = beforeCursor.split(/[\s"':,{}[\]()]/);
-    const currentWord = words.pop() || "";
-    const beforeWord = words.join(" ");
+  const handleQueryChange = (value: string) => {
+    setQuery(value);
+    validateQuery(value);
+  };
 
-    const newQuery =
-      beforeWord + (beforeWord ? " " : "") + `"${field}"` + afterCursor;
-    setQuery(newQuery);
-    setShowSuggestions(false);
+  const insertField = (field: string) => {
+    const fieldTemplate = `"${field}": `;
+
+    // Simple insertion at the end before closing brace
+    if (query === "{}") {
+      setQuery(`{"${field}": ""}`);
+    } else {
+      const insertPosition = query.lastIndexOf("}");
+      const beforeBrace = query.slice(0, insertPosition);
+      const needsComma =
+        beforeBrace.trim().length > 1 && !beforeBrace.trim().endsWith(",");
+      const newQuery =
+        beforeBrace +
+        (needsComma ? ", " : "") +
+        fieldTemplate +
+        '""' +
+        query.slice(insertPosition);
+      setQuery(newQuery);
+    }
+    setSearchField("");
   };
 
   const applyFilter = () => {
-    setIsFilterModalOpen(false);
-    filterApplied();
+    if (isValidQuery) {
+      onFilterApplied(query);
+      setIsOpen(false);
+    }
   };
 
   const clearFilter = () => {
     setQuery("{}");
-    setIsFilterModalOpen(false);
-    filterApplied();
+    onFilterApplied("{}");
+    setIsOpen(false);
   };
 
+  const resetToDefault = () => {
+    setQuery("{}");
+    setIsValidQuery(true);
+  };
+
+  const hasActiveFilter = currentFilter !== "{}";
+
   return (
-    <div className="flex items-center gap-3">
-      <Dialog open={isFilterModalOpen} onOpenChange={setIsFilterModalOpen}>
-        <DialogTrigger asChild>
-          <Button
-            variant="outline"
-            size="sm"
-            className="cursor-pointer bg-transparent"
-          >
-            <Filter className="h-4 w-4 mr-2" />
-            Filter Documents
-          </Button>
-        </DialogTrigger>
-        <DialogContent className="max-w-3xl max-h-[80vh]">
-          <DialogHeader>
-            <DialogTitle className="font-mono">
-              (Still in development)
-              {/*MongoDB Query Filter */}
-            </DialogTitle>
-          </DialogHeader>
-          <div className="space-y-4">
+    <Dialog open={isOpen} onOpenChange={setIsOpen}>
+      <DialogTrigger asChild>
+        <Button
+          variant={hasActiveFilter ? "default" : "outline"}
+          size="sm"
+          className="gap-2"
+        >
+          <Filter className="h-4 w-4" />
+          Filter
+          {hasActiveFilter && (
+            <span className="bg-background/20 px-1.5 py-0.5 rounded text-xs">
+              Active
+            </span>
+          )}
+        </Button>
+      </DialogTrigger>
+
+      <DialogContent
+        className="max-h-[95vh] flex flex-col"
+        style={{ width: "90vw", maxWidth: "1400px" }}
+      >
+        <DialogHeader>
+          <DialogTitle>Filter Documents</DialogTitle>
+        </DialogHeader>
+
+        <div className="flex flex-1 gap-8 min-h-0">
+          {/* Left Panel - Query Editor */}
+          <div className="flex-1 space-y-6">
             <div className="space-y-2">
-              <label className="text-sm font-medium">Query:</label>
-              <div className="relative">
-                <Textarea
-                  placeholder='{"name": {"$regex": "John", "$options": "i"}}'
-                  value={query}
-                  onChange={(e) => {
-                    setCursorPosition(e.target.selectionStart || 0);
-                    handleQueryChange(e.target.value);
-                  }}
-                  // onSelect={(e) =>
-                  //   setCursorPosition(e.target.selectionStart || 0)
-                  // }
-                  className="font-mono text-sm min-h-[120px] resize-none"
-                  rows={5}
-                />
-                {showSuggestions && (
-                  <div className="absolute top-full left-0 right-0 bg-background border rounded-md shadow-lg z-50 max-h-40 overflow-y-auto">
-                    {filteredSuggestions.map((field) => (
-                      <button
-                        key={field}
-                        onClick={() => insertSuggestion(field)}
-                        className="w-full text-left px-3 py-2 hover:bg-muted text-sm font-mono flex items-center justify-between"
-                      >
-                        <span>{field}</span>
-                        {/*<Badge variant="secondary" className="text-xs">*/}
-                        {/*  {getFieldType(sampleDocuments[0][field])}*/}
-                        {/*</Badge>*/}
-                      </button>
-                    ))}
-                  </div>
-                )}
+              <div className="flex items-center justify-between">
+                <label className="text-sm font-medium">MongoDB Query</label>
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={resetToDefault}
+                  className="text-xs"
+                >
+                  Reset
+                </Button>
               </div>
-              <div className="text-xs text-muted-foreground space-y-1">
-                <p>
-                  Enter MongoDB query syntax. Start typing field names to see
-                  suggestions.
-                </p>
-                <p className="font-mono">
-                  Examples: {`{"age": {"$gt": 25}}`}, {`{"isActive": true}`},{" "}
-                  {`{"name": {"$regex": "John", "$options": "i"}}`}
-                </p>
-              </div>
+
+              <Textarea
+                value={query}
+                onChange={(e) => handleQueryChange(e.target.value)}
+                placeholder='{"field": "value"}'
+                className={`font-mono text-sm min-h-[280px] resize-none ${
+                  !isValidQuery ? "border-red-500 focus:border-red-500" : ""
+                }`}
+              />
+
+              {!isValidQuery && (
+                <p className="text-red-500 text-xs">Invalid JSON syntax</p>
+              )}
             </div>
 
+            {/* Query Examples */}
             <div className="space-y-2">
-              <label className="text-sm font-medium">Available Fields:</label>
-              <div className="flex flex-wrap gap-1 max-h-32 overflow-y-auto p-2 bg-muted/30 rounded">
-                {fields.map((field) => (
+              <label className="text-sm font-medium">Quick Examples</label>
+              <div className="grid grid-cols-1 gap-2 text-xs">
+                {[
+                  {
+                    label: "Text contains",
+                    value: '{"name": {"$regex": "John", "$options": "i"}}',
+                  },
+                  { label: "Greater than", value: '{"age": {"$gt": 25}}' },
+                  { label: "Exact match", value: '{"status": "active"}' },
+                  { label: "Boolean", value: '{"isPublished": true}' },
+                ].map((example) => (
                   <button
-                    key={field}
-                    onClick={() => insertSuggestion(field)}
-                    className="inline-flex items-center gap-1 px-2 py-1 bg-background border rounded text-xs font-mono hover:bg-muted cursor-pointer"
+                    key={example.label}
+                    onClick={() => setQuery(example.value)}
+                    className="text-left p-2 bg-muted/50 rounded hover:bg-muted transition-colors"
                   >
-                    {field}
-                    {/*<Badge variant="outline" className="text-xs">*/}
-                    {/*  /!*{getFieldType(sampleDocuments[0][field])}*!/*/}
-                    {/*</Badge>*/}
+                    <div className="font-medium">{example.label}</div>
+                    <code className="text-muted-foreground">
+                      {example.value}
+                    </code>
                   </button>
                 ))}
               </div>
             </div>
+          </div>
 
-            <div className="flex justify-between">
-              <Button
-                variant="outline"
-                onClick={clearFilter}
-                className="cursor-pointer bg-transparent"
-              >
-                <X className="h-4 w-4 mr-2" />
-                Clear Filter
-              </Button>
+          {/* Right Panel - Available Fields */}
+          <div className="w-96 space-y-4">
+            <div className="space-y-2">
+              <label className="text-sm font-medium">Available Fields</label>
 
-              <Button onClick={() => applyFilter} className="cursor-pointer">
-                Apply Filter
-              </Button>
+              <div className="relative">
+                <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                <Input
+                  placeholder="Search fields..."
+                  value={searchField}
+                  onChange={(e) => setSearchField(e.target.value)}
+                  className="pl-9"
+                />
+              </div>
+            </div>
+
+            <div className="border rounded-lg max-h-[400px] overflow-y-auto">
+              {filteredFields.length > 0 ? (
+                <div className="p-2 space-y-1">
+                  {filteredFields.map((field) => (
+                    <button
+                      key={field}
+                      onClick={() => insertField(field)}
+                      className="w-full text-left px-3 py-2 text-sm font-mono bg-background hover:bg-muted rounded border transition-colors"
+                    >
+                      {field}
+                    </button>
+                  ))}
+                </div>
+              ) : (
+                <div className="p-4 text-center text-muted-foreground text-sm">
+                  No fields found
+                </div>
+              )}
+            </div>
+
+            <div className="text-xs text-muted-foreground space-y-1 px-3 bg-muted/30 rounded">
+              <p>
+                <strong>Tips:</strong>
+              </p>
+              <ul className="space-y-1 ml-2">
+                <li>• Click fields to insert them</li>
+                <li>• Use MongoDB query syntax</li>
+                <li>• $regex for text search</li>
+                <li>• $gt, $lt for numbers</li>
+              </ul>
             </div>
           </div>
-        </DialogContent>
-      </Dialog>
-    </div>
+        </div>
+
+        {/* Footer Actions */}
+        <div className="flex justify-between pt-6 border-t">
+          <Button variant="outline" onClick={clearFilter} className="gap-2">
+            <X className="h-4 w-4" />
+            Clear Filter
+          </Button>
+
+          <Button
+            onClick={applyFilter}
+            disabled={!isValidQuery}
+            className="gap-2"
+          >
+            Apply Filter
+          </Button>
+        </div>
+      </DialogContent>
+    </Dialog>
   );
 }

@@ -177,7 +177,7 @@ export async function fetchDocuments(
   connectionUrl: string,
   databaseName: string,
   collectionName: string,
-  search: string = "",
+  query_string: string = "",
   page: number = 1,
   limit: number = 20,
 ): Promise<{
@@ -213,22 +213,8 @@ export async function fetchDocuments(
     const collection = database.collection(collectionName);
 
     // Build search query
-    let query: Record<string, any> = {};
-    if (search) {
-      // If collection has a text index, $text will work
-      query = { $text: { $search: search } };
-
-      // Fallback if no text index → regex search in all string fields
-      try {
-        await collection.indexInformation(); // check if text index exists
-      } catch {
-        query = {
-          $or: [
-            { _id: { $regex: search, $options: "i" } }, // try id string match
-          ],
-        };
-      }
-    }
+    let query: Record<string, any> =
+      query_string && query_string !== "{}" ? JSON.parse(query_string) : {};
 
     // Get total count
     let totalDocuments = 0;

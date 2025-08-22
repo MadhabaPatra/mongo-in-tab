@@ -4,7 +4,8 @@ import { useEffect, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Alert, AlertDescription } from "@/components/ui/alert";
-import { Card, CardContent } from "@/components/ui/card";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Skeleton } from "@/components/ui/skeleton";
 import {
   Database,
   History,
@@ -12,13 +13,15 @@ import {
   Info,
   RefreshCw,
   AlertCircle,
+  Plus,
+  Shield,
+  Server,
 } from "lucide-react";
 
 import { ConnectionCard } from "@/components/connections/connection-card";
 import { useRouter } from "next/navigation";
 import { StorageManager } from "@/lib/storage";
 import { testMongoConnection } from "@/lib/mongodb";
-import { Header } from "@/components/header";
 import {
   Dialog,
   DialogContent,
@@ -28,6 +31,7 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { toast } from "sonner";
+import { AppHeader } from "@/components/app-header";
 
 export default function AppPage() {
   const [mongoUrl, setMongoUrl] = useState("");
@@ -84,22 +88,19 @@ export default function AppPage() {
   const handleConnect = async () => {
     if (!!validationError || !mongoUrl.trim()) {
     } else {
-      // Now Test the connection url
       setIsConnecting(true);
+      setValidationError("");
       try {
         const response = await testMongoConnection(mongoUrl);
 
         if (!response.success) {
           setValidationError(response?.message || "Something went wrong");
         } else {
-          // Successfully connected
           const addedConnection = StorageManager.addConnection(mongoUrl);
-
-          // Redirect to
           router.push("/app/databases?connectionId=" + addedConnection);
         }
       } catch (e) {
-        setValidationError("Something went wrong, Please try agan later.");
+        setValidationError("Something went wrong, Please try again later.");
       } finally {
         setIsConnecting(false);
       }
@@ -107,125 +108,169 @@ export default function AppPage() {
   };
 
   return (
-    <div className="min-h-screen bg-background">
-      <Header />
-      <main className="container mx-auto px-4 py-8 max-w-4xl">
+    <div className="min-h-screen bg-gray-50">
+      <AppHeader type={"connection"} />
+
+      {/* Header Bar */}
+      <div className="bg-white border-b border-gray-200 py-4">
+        <div className="flex items-center justify-between max-w-7xl mx-auto">
+          <div className="flex items-center space-x-4">
+            <div className="flex items-center space-x-2">
+              <Server className="h-5 w-5 text-blue-600" />
+              <h1 className="text-lg font-semibold text-gray-900">
+                MongoDB Connections
+              </h1>
+            </div>
+          </div>
+          <div className="flex items-center space-x-4">
+            {connections.length > 0 && (
+              <div className="text-sm text-gray-600">
+                {connections.length} saved connection
+                {connections.length !== 1 ? "s" : ""}
+              </div>
+            )}
+          </div>
+        </div>
+      </div>
+
+      <div className="max-w-7xl mx-auto py-6">
         {/* Privacy Alert */}
-        <Alert className="mb-8 border-blue-200 bg-blue-50/50">
-          <Info className="h-4 w-4 text-blue-600" />
+        <Alert className="border-blue-200 bg-blue-50 mb-6">
+          <Shield className="h-4 w-4 text-blue-600" />
           <AlertDescription className="text-blue-800">
-            We don't store any information on our end, everything is stored in
-            your browser.
+            <strong>Privacy First:</strong> All connections are stored locally
+            in your browser. We never see or store your connection details.
           </AlertDescription>
         </Alert>
 
-        {/* Main Connection Section */}
-        <Card className="bg-muted/20 border-2 border-dashed border-muted-foreground/20">
-          <CardContent className="p-8">
-            <div className="space-y-8">
-              <div className="text-center space-y-4">
-                <div className="flex items-center justify-center gap-3 mb-6">
-                  <Database className="h-8 w-8 text-primary" />
-                  <h1 className="text-3xl font-mono font-bold">
-                    Connect to MongoDB
-                  </h1>
+        {/* Split Layout */}
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 h-[calc(100vh-240px)]">
+          {/* Left: New Connection */}
+          <Card className="border-gray-200 flex flex-col">
+            <CardHeader className="border-b border-gray-100 flex-shrink-0">
+              <CardTitle className="flex items-center gap-2">
+                <div className="h-8 w-8 bg-blue-50 rounded-lg flex items-center justify-center">
+                  <Plus className="h-4 w-4 text-blue-600" />
+                </div>
+                New Connection
+              </CardTitle>
+            </CardHeader>
+            <CardContent className="flex-1 flex flex-col p-6">
+              {/* Connection Form - Fixed at top */}
+              <div className="space-y-4 mb-8">
+                <div className="relative">
+                  <Input
+                    type="text"
+                    placeholder="mongodb://username:password@host:port/database"
+                    value={mongoUrl}
+                    onChange={(e) => {
+                      setMongoUrl(e.target.value);
+                      if (validationError) setValidationError("");
+                    }}
+                    className="h-12 text-sm font-mono px-4 pr-32 border-gray-300 focus:border-blue-500 focus:ring-blue-500"
+                    autoFocus
+                    onKeyDown={(e) => e.key === "Enter" && handleConnect()}
+                  />
+                  <Button
+                    onClick={handleConnect}
+                    disabled={!mongoUrl.trim() || isConnecting}
+                    className="absolute right-2 top-2 h-8 px-4 bg-blue-600 hover:bg-blue-700"
+                  >
+                    {isConnecting ? (
+                      <>
+                        <div className="animate-spin rounded-full h-4 w-4 border-2 border-white border-t-transparent mr-2" />
+                        Connecting...
+                      </>
+                    ) : (
+                      <>
+                        <Server className="h-4 w-4 mr-2" />
+                        Connect
+                      </>
+                    )}
+                  </Button>
                 </div>
 
-                <div className="space-y-4 max-w-2xl mx-auto">
-                  <div className="relative">
-                    <Input
-                      type="text"
-                      placeholder="mongodb://username:password@host:port/database"
-                      value={mongoUrl}
-                      onChange={(e) => setMongoUrl(e.target.value)}
-                      className="h-14 text-base font-mono px-4 pr-32"
-                      autoFocus
-                      onKeyDown={(e) => e.key === "Enter" && handleConnect()}
-                    />
+                {validationError && (
+                  <Alert
+                    variant="destructive"
+                    className="border-red-200 bg-red-50"
+                  >
+                    <AlertCircle className="h-4 w-4" />
+                    <AlertDescription>{validationError}</AlertDescription>
+                  </Alert>
+                )}
+              </div>
+            </CardContent>
+          </Card>
+
+          {/* Right: Recent Connections */}
+          <Card className="border-gray-200 flex flex-col">
+            <CardHeader className="border-b border-gray-100 flex-shrink-0">
+              <div className="flex items-center justify-between">
+                <CardTitle className="flex items-center gap-2">
+                  <div className="h-8 w-8 bg-gray-50 rounded-lg flex items-center justify-center">
+                    <History className="h-4 w-4 text-gray-600" />
+                  </div>
+                  Recent Connections
+                  {connections.length > 0 && (
+                    <span className="text-sm font-normal text-gray-500">
+                      ({connections.length})
+                    </span>
+                  )}
+                </CardTitle>
+                {connections.length > 0 && (
+                  <div className="flex gap-2">
                     <Button
-                      onClick={handleConnect}
-                      disabled={!mongoUrl.trim() || isConnecting}
-                      className="absolute right-2 top-2 h-10 px-6"
+                      variant="outline"
+                      size="sm"
+                      onClick={loadConnections}
                     >
-                      {isConnecting ? (
-                        <>
-                          <div className="animate-spin rounded-full h-4 w-4 border-2 border-white border-t-transparent mr-2" />
-                          Connecting...
-                        </>
-                      ) : (
-                        <>
-                          <Database className="h-4 w-4 mr-2" />
-                          Connect
-                        </>
-                      )}
+                      <RefreshCw className="h-4 w-4" />
+                    </Button>
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={clearConnections}
+                      className="text-red-600 hover:text-red-700 hover:bg-red-50 border-red-200"
+                    >
+                      <Trash2 className="h-4 w-4" />
                     </Button>
                   </div>
-
-                  <p className="text-sm text-muted-foreground">
-                    Enter your MongoDB connection string to browse databases,
-                    collections, and documents
-                  </p>
-                  {validationError && (
-                    <Alert variant="destructive">
-                      <AlertCircle className="h-4 w-4" />
-                      <AlertDescription>{validationError}</AlertDescription>
-                    </Alert>
-                  )}
+                )}
+              </div>
+            </CardHeader>
+            <CardContent className="flex-1 px-6 overflow-auto">
+              {isLoadingConnections ? (
+                <LoadingConnections />
+              ) : connections.length > 0 ? (
+                <div className="space-y-3">
+                  {connections.map((connection, i) => (
+                    <ConnectionCard
+                      connection={connection}
+                      key={i}
+                      clearConnectionById={clearConnectionById}
+                    />
+                  ))}
                 </div>
-              </div>
-            </div>
-          </CardContent>
-        </Card>
+              ) : (
+                <div className="flex flex-col items-center justify-center h-full text-center py-12">
+                  <div className="h-16 w-16 bg-gray-100 rounded-full flex items-center justify-center mb-4">
+                    <History className="h-8 w-8 text-gray-400" />
+                  </div>
+                  <h3 className="text-lg font-medium text-gray-900 mb-2">
+                    No saved connections
+                  </h3>
+                  <p className="text-gray-600 max-w-sm">
+                    Your connection history will appear here after you connect
+                    to a database for the first time.
+                  </p>
+                </div>
+              )}
+            </CardContent>
+          </Card>
+        </div>
 
-        {/* Connection History */}
-        {connections.length > 0 && (
-          <div className="space-y-4 pt-4 border-t border-border pl-0 my-14">
-            <div className="flex items-center justify-between">
-              <div className="flex items-center gap-2">
-                <History className="h-5 w-5 text-muted-foreground" />
-                <h2 className="text-xl font-semibold">Recent Connections</h2>
-                <span className="text-sm text-muted-foreground">
-                  ({connections.length})
-                </span>
-              </div>
-              <div className="flex items-center gap-2">
-                <Button variant="outline" size="sm" onClick={loadConnections}>
-                  <RefreshCw className="h-4 w-4 mr-2" />
-                  Refresh all
-                </Button>
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={clearConnections}
-                  className="text-destructive hover:bg-transparent hover:text-destructive cursor-pointer bg-transparent"
-                >
-                  <Trash2 className="h-4 w-4 mr-2" />
-                  Clear All
-                </Button>
-              </div>
-            </div>
-
-            <div className="grid gap-2 gap-y-4">
-              {connections.map((connection, i) => (
-                <ConnectionCard
-                  connection={connection}
-                  key={i}
-                  clearConnectionById={clearConnectionById}
-                />
-              ))}
-            </div>
-          </div>
-        )}
-
-        {/* Empty State */}
-        {connections.length === 0 && (
-          <div className="text-center py-12 text-muted-foreground">
-            <History className="h-12 w-12 mx-auto mb-4 opacity-50" />
-            <p>No recent connections</p>
-            <p className="text-sm">Your connection history will appear here</p>
-          </div>
-        )}
-
+        {/* Delete Confirmation Dialog */}
         <Dialog
           open={!!deleteConfirm}
           onOpenChange={() => setDeleteConfirm(null)}
@@ -253,7 +298,29 @@ export default function AppPage() {
             </DialogFooter>
           </DialogContent>
         </Dialog>
-      </main>
+      </div>
+    </div>
+  );
+}
+
+// Loading Connections Skeleton
+function LoadingConnections() {
+  return (
+    <div className="space-y-3">
+      {[...Array(3)].map((_, i) => (
+        <div key={i} className="border border-gray-200 rounded-lg p-4">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center space-x-3">
+              <Skeleton className="h-10 w-10 rounded-lg bg-gray-200" />
+              <div className="space-y-2">
+                <Skeleton className="h-4 w-48 bg-gray-200" />
+                <Skeleton className="h-3 w-32 bg-gray-200" />
+              </div>
+            </div>
+            <Skeleton className="h-8 w-20 bg-gray-200" />
+          </div>
+        </div>
+      ))}
     </div>
   );
 }

@@ -93,3 +93,13 @@ export function getFieldType(value: any): string {
   }
   return "unknown";
 }
+
+export function getDatabaseLink(
+  connectionId?: string | null,
+  database?: string | null,
+): string {
+  if (connectionId && database) {
+    return `/app/collections?connectionId=${connectionId}&database=${database}`;
+  }
+  return "#";
+}

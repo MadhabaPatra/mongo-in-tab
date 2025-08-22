@@ -4,6 +4,7 @@ import {
   ChevronRight,
   ChevronsLeft,
   ChevronsRight,
+  MoreHorizontal,
 } from "lucide-react";
 import {
   Select,
@@ -12,7 +13,8 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { useState } from "react";
+import { useState, useEffect } from "react";
+import { Badge } from "@/components/ui/badge";
 
 export function DocumentsPagination({
   pagination,
@@ -21,126 +23,115 @@ export function DocumentsPagination({
   pagination: IDocumentPagination;
   onPaginationChange: (limit: number, pageNo: number) => void;
 }) {
-  const [currentPage, setCurrentPage] = useState(1);
+  const [currentPage, setCurrentPage] = useState(pagination.currentPage || 1);
   const [limit, setLimit] = useState(25);
 
+  useEffect(() => {
+    setCurrentPage(pagination.currentPage || 1);
+  }, [pagination.currentPage]);
+
   const goToPage = (page: number) => {
-    setCurrentPage(Math.max(1, Math.min(pagination.totalPages, page)));
-    onPaginationChange(limit, page);
+    const newPage = Math.max(1, Math.min(pagination.totalPages, page));
+    setCurrentPage(newPage);
+    onPaginationChange(limit, newPage);
+  };
+
+  const handleLimitChange = (newLimit: string) => {
+    const limitNum = Number.parseInt(newLimit);
+    setLimit(limitNum);
+    setCurrentPage(1);
+    onPaginationChange(limitNum, 1);
   };
 
   return (
-    <div className="flex flex-col sm:flex-row items-center justify-between gap-4 py-3 border-t bg-muted/20 border-b-0">
-      <div className="flex items-center gap-4 text-sm text-muted-foreground">
-        <span>
-          Showing {pagination.start} to {pagination.end} of{" "}
-          {pagination.totalDocuments} documents
+    <div className="flex items-center space-x-2">
+      {/* Document info */}
+      <Badge variant="outline" className="text-xs text-gray-600">
+        Showing{" "}
+        <span className="font-medium text-gray-900">
+          {pagination.start}-{pagination.end}
+        </span>{" "}
+        of{" "}
+        <span className="font-medium text-gray-900">
+          {pagination.totalDocuments.toLocaleString()}
         </span>
-      </div>
+        {" documents"}
+      </Badge>
 
-      <div className="flex items-center gap-2">
-        {/* First page button */}
+      {/* Navigation */}
+      <div className="flex items-center space-x-1">
         <Button
-          variant="outline"
-          size="sm"
-          onClick={() => goToPage(1)}
-          disabled={currentPage === 1}
-          className="cursor-pointer"
-        >
-          <ChevronsLeft className="h-4 w-4" />
-        </Button>
-
-        {/* Previous page button */}
-        <Button
-          variant="outline"
+          variant="ghost"
           size="sm"
           onClick={() => goToPage(currentPage - 1)}
           disabled={currentPage === 1}
-          className="cursor-pointer"
+          className="h-7 w-7 p-0"
         >
-          <ChevronLeft className="h-4 w-4" />
+          <ChevronLeft className="h-3 w-3" />
         </Button>
 
-        {/* Page numbers */}
-        <div className="flex items-center gap-1">
+        <div className="flex items-center space-x-1">
           {(() => {
+            // Show max 3 page numbers for header
             const pages = [];
-            const showPages = 5;
-            let startPage = Math.max(
-              1,
-              currentPage - Math.floor(showPages / 2),
-            );
-            const endPage = Math.min(
-              pagination.totalPages,
-              startPage + showPages - 1,
-            );
+            const totalPages = pagination.totalPages;
 
-            if (endPage - startPage + 1 < showPages) {
-              startPage = Math.max(1, endPage - showPages + 1);
+            if (totalPages <= 3) {
+              for (let i = 1; i <= totalPages; i++) {
+                pages.push(i);
+              }
+            } else {
+              if (currentPage === 1) {
+                pages.push(1, 2, 3);
+              } else if (currentPage === totalPages) {
+                pages.push(totalPages - 2, totalPages - 1, totalPages);
+              } else {
+                pages.push(currentPage - 1, currentPage, currentPage + 1);
+              }
             }
 
-            for (let i = startPage; i <= endPage; i++) {
-              pages.push(
-                <Button
-                  key={i}
-                  variant={currentPage === i ? "default" : "outline"}
-                  size="sm"
-                  onClick={() => goToPage(i)}
-                  className="w-8 h-8 p-0 cursor-pointer"
-                >
-                  {i}
-                </Button>,
-              );
-            }
-            return pages;
+            return pages.map((page) => (
+              <Button
+                key={page}
+                variant={currentPage === page ? "default" : "ghost"}
+                size="sm"
+                onClick={() => goToPage(page)}
+                className={`h-7 w-7 p-0 text-xs ${
+                  currentPage === page
+                    ? "bg-gray-900 text-white hover:bg-gray-800"
+                    : "text-gray-700 hover:bg-gray-100"
+                }`}
+              >
+                {page}
+              </Button>
+            ));
           })()}
         </div>
 
-        {/* Next page button */}
         <Button
-          variant="outline"
+          variant="ghost"
           size="sm"
           onClick={() => goToPage(currentPage + 1)}
           disabled={currentPage === pagination.totalPages}
-          className="cursor-pointer"
+          className="h-7 w-7 p-0"
         >
-          <ChevronRight className="h-4 w-4" />
-        </Button>
-
-        {/* Last page button */}
-        <Button
-          variant="outline"
-          size="sm"
-          onClick={() => goToPage(pagination.totalPages)}
-          disabled={currentPage === pagination.totalPages}
-          className="cursor-pointer"
-        >
-          <ChevronsRight className="h-4 w-4" />
+          <ChevronRight className="h-3 w-3" />
         </Button>
       </div>
 
-      <div className="flex items-center gap-2">
-        <Select
-          value={limit.toString()}
-          onValueChange={(value) => {
-            setLimit(Number.parseInt(value));
-            setCurrentPage(1);
-            onPaginationChange(Number.parseInt(value), 1);
-          }}
-        >
-          <SelectTrigger className="w-[80px]">
-            <SelectValue />
-          </SelectTrigger>
-          <SelectContent>
-            <SelectItem value="5">5</SelectItem>
-            <SelectItem value="10">10</SelectItem>
-            <SelectItem value="25">25</SelectItem>
-            <SelectItem value="50">50</SelectItem>
-            <SelectItem value="100">100</SelectItem>
-          </SelectContent>
-        </Select>
-        <span className="text-sm text-muted-foreground">per page</span>
-      </div>
+      {/* Items per page */}
+      <Select value={limit.toString()} onValueChange={handleLimitChange}>
+        <SelectTrigger className="h-7 text-xs border-gray-300">
+          <SelectValue />
+        </SelectTrigger>
+        <SelectContent>
+          <SelectItem value="5">5 per page</SelectItem>
+          <SelectItem value="10">10 per page</SelectItem>
+          <SelectItem value="25">25 per page</SelectItem>
+          <SelectItem value="50">50 per page</SelectItem>
+          <SelectItem value="100">100 per page</SelectItem>
+        </SelectContent>
+      </Select>
     </div>
   );
 }

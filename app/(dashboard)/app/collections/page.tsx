@@ -1,8 +1,9 @@
 "use client";
 import { useEffect, useState } from "react";
-import { Database, Search } from "lucide-react";
+import { Search, ChevronDown, FolderOpen } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { Card, CardContent, CardHeader } from "@/components/ui/card";
+import { Skeleton } from "@/components/ui/skeleton";
 
 import { StorageManager } from "@/lib/storage";
 import { useRouter, useSearchParams } from "next/navigation";
@@ -18,6 +19,7 @@ import { CollectionErrorState } from "@/components/collections/collection-error-
 import { CollectionEmptyState } from "@/components/collections/collection-empty-state";
 import { CollectionCard } from "@/components/collections/collection-card";
 import { AppHeader } from "@/components/app-header";
+import Link from "next/link";
 
 export default function CollectionPage() {
   const router = useRouter();
@@ -26,14 +28,18 @@ export default function CollectionPage() {
   const connectionId = searchParams.get("connectionId");
   const database = searchParams.get("database");
 
+  // Get connection details for display
+  const connectionData = connectionId
+    ? StorageManager.getConnectionDetails(connectionId)
+    : null;
+
   const [databases, setDatabases] = useState<IDatabase[]>([]);
   const [isLoadingDatabases, setIsLoadingDatabases] = useState(false);
-
   const [currentDatabase, setCurrentDatabase] = useState("");
-
   const [collections, setCollections] = useState<ICollection[]>([]);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [searchTerm, setSearchTerm] = useState("");
 
   const loadDatabases = async () => {
     setIsLoadingDatabases(true);
@@ -65,9 +71,6 @@ export default function CollectionPage() {
       if (database) {
         setCurrentDatabase(database);
       }
-
-      // Add this database for caching
-      //StorageManager.addConnection(connectionUrl);
     } catch (error) {
       const errorMessage =
         error instanceof Error ? error.message : "Unknown error";
@@ -101,9 +104,6 @@ export default function CollectionPage() {
       }
 
       setIsLoading(false);
-
-      // Add this database for caching
-      //StorageManager.addConnection(connectionUrl);
     } catch (error) {
       const errorMessage =
         error instanceof Error ? error.message : "Unknown error";
@@ -117,18 +117,12 @@ export default function CollectionPage() {
 
   useEffect(() => {
     const params = new URLSearchParams(window.location.search);
-
     params.set("database", currentDatabase);
-
     router.replace(`?${params.toString()}`);
     if (currentDatabase) {
       loadCollections();
     }
   }, [currentDatabase]);
-
-  const [searchTerm, setSearchTerm] = useState("");
-
-  const [isLoadingStats, setIsLoadingStats] = useState(false);
 
   const filteredCollections = collections.filter((collection) => {
     const matchesSearch = collection.name
@@ -140,109 +134,161 @@ export default function CollectionPage() {
   // Error State
   if (error) {
     return (
-      <CollectionErrorState errorMessage={error} onClickRefresh={() => {}} />
+      <div className="min-h-screen bg-gray-50">
+        <AppHeader type={"collection"} />
+        <div className="p-4">
+          <CollectionErrorState
+            errorMessage={error}
+            onClickRefresh={loadDatabases}
+          />
+        </div>
+      </div>
     );
   }
 
   return (
-    <div>
+    <div className="min-h-screen bg-gray-50">
       <AppHeader type={"collection"} />
-      <div className="py-8 px-6 space-y-6">
-        <div className="flex items-center justify-between">
-          <div className="flex items-center gap-4">
-            <div className="flex items-center gap-2">
-              <Database className="h-5 w-5 text-primary" />
-              <span className="text-sm font-medium">Database:</span>
+
+      {/* Compact Header Bar */}
+      <div className="bg-white border-b border-gray-200 py-4">
+        <div className="flex items-center justify-between max-w-7xl mx-auto">
+          {/* Left: Connection Name + Database Selector */}
+          <div className="flex items-center space-x-4">
+            <div className="flex items-center space-x-2 text-sm text-gray-600">
+              <Link
+                href="/app/"
+                className="flex items-center space-x-1.5 rounded-md px-2 py-1 text-sm font-medium text-muted-foreground hover:text-foreground hover:bg-muted/50 transition-colors"
+              >
+                <span>{connectionData?.name || "Connection"}</span>
+              </Link>
+              <ChevronDown className="h-3 w-3 rotate-[-90deg]" />
+            </div>
+
+            {isLoadingDatabases ? (
+              <DatabaseSelectorSkeleton />
+            ) : (
               <Select
                 value={currentDatabase}
                 onValueChange={setCurrentDatabase}
                 disabled={isLoadingDatabases}
               >
-                <SelectTrigger className="w-[200px] bg-background border-input">
-                  <SelectValue />
+                <SelectTrigger className="w-[200px] h-8 text-sm border-gray-300">
+                  <SelectValue placeholder="Select database..." />
                 </SelectTrigger>
                 <SelectContent>
                   {databases.map((db, i) => (
-                    <SelectItem
-                      key={i}
-                      value={db.name}
-                      className="hover:bg-primary/10 hover:text-primary cursor-pointer"
-                    >
-                      <div className="flex items-center justify-between w-full">
-                        <span className="font-mono">{db.name}</span>
-                        {/*<span className="text-xs font-mono ml-4 text-muted-foreground group-hover:text-white">*/}
-                        {/*  {db.collections} collections*/}
-                        {/*</span>*/}
-                      </div>
+                    <SelectItem key={i} value={db.name} className="text-sm">
+                      {db.name}
                     </SelectItem>
                   ))}
                 </SelectContent>
               </Select>
-            </div>
+            )}
+          </div>
+
+          {/* Right: Search */}
+          <div className="flex items-center space-x-4">
+            {isLoadingDatabases ? (
+              <SearchSkeleton />
+            ) : (
+              <div className="relative">
+                <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
+                <Input
+                  placeholder="Search collections..."
+                  value={searchTerm}
+                  onChange={(e) => setSearchTerm(e.target.value)}
+                  className="pl-10 w-64 h-8 text-sm border-gray-300"
+                />
+              </div>
+            )}
           </div>
         </div>
+      </div>
 
-        <div className="flex flex-col sm:flex-row gap-4">
-          <div className="relative flex-1">
-            <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-            <Input
-              placeholder="Search collection..."
-              value={searchTerm}
-              onChange={(e) => setSearchTerm(e.target.value)}
-              className="pl-10"
-            />
-          </div>
-        </div>
-
-        {/* Stats Cards */}
-        {/*{isLoadingStats ? (*/}
-        {/*  <DatabaseStatsSkeletonLoader />*/}
-        {/*) : (*/}
-        {/*  <DatabaseStats*/}
-        {/*    data={{*/}
-        {/*      totalDatabases: 0,*/}
-        {/*      totalCollections: 0,*/}
-        {/*      totalDocuments: 0,*/}
-        {/*    }}*/}
-        {/*  />*/}
-        {/*)}*/}
-
-        {/* Loading State */}
-        {isLoading ? (
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-            {[...Array(6)].map((_, i) => (
-              <Card key={i} className="animate-pulse">
-                <CardHeader className="pb-3">
-                  <div className="h-4 bg-muted rounded w-3/4"></div>
-                </CardHeader>
-                <CardContent className="space-y-3">
-                  <div className="h-3 bg-muted rounded w-1/2"></div>
-                  <div className="h-3 bg-muted rounded w-2/3"></div>
-                  <div className="h-3 bg-muted rounded w-1/3"></div>
-                </CardContent>
-              </Card>
+      {/* Main Content */}
+      <div className="max-w-7xl mx-auto py-6">
+        {/* Content Area */}
+        {isLoadingDatabases || isLoading ? (
+          <LoadingGrid />
+        ) : !currentDatabase ? (
+          <EmptyDatabaseState />
+        ) : filteredCollections.length > 0 ? (
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
+            {filteredCollections.map((collection, i) => (
+              <CollectionCard collection={collection} key={i} />
             ))}
           </div>
         ) : (
-          <>
-            {/* Collection Grid */}
-            {filteredCollections.length > 0 ? (
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                {filteredCollections.map((collection, i) => (
-                  <CollectionCard collection={collection} key={i} />
-                ))}
-              </div>
-            ) : (
-              <CollectionEmptyState
-                searchTerm={searchTerm}
-                clearSearch={() => {
-                  setSearchTerm("");
-                }}
-              />
-            )}
-          </>
+          <CollectionEmptyState
+            searchTerm={searchTerm}
+            clearSearch={() => setSearchTerm("")}
+          />
         )}
       </div>
     </div>
+  );
+}
+
+// Database Selector Skeleton
+function DatabaseSelectorSkeleton() {
+  return (
+    <div className="w-[200px] h-8 rounded-md border border-gray-300 bg-white">
+      <div className="flex items-center justify-between px-3 py-2">
+        <Skeleton className="h-3 w-24 bg-gray-200" />
+        <Skeleton className="h-3 w-3 bg-gray-200" />
+      </div>
+    </div>
+  );
+}
+
+// Search Skeleton
+function SearchSkeleton() {
+  return (
+    <div className="relative w-64">
+      <div className="h-8 rounded-md border border-gray-300 bg-white">
+        <div className="flex items-center px-3 py-2">
+          <Skeleton className="h-4 w-4 bg-gray-200 mr-3" />
+          <Skeleton className="h-3 w-32 bg-gray-200" />
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// Loading Grid
+function LoadingGrid() {
+  return (
+    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
+      {[...Array(8)].map((_, i) => (
+        <Card key={i} className="animate-pulse">
+          <CardHeader className="pb-3">
+            <Skeleton className="h-4 bg-gray-200 w-3/4" />
+          </CardHeader>
+          <CardContent className="space-y-3">
+            <Skeleton className="h-3 bg-gray-200 w-1/2" />
+            <Skeleton className="h-3 bg-gray-200 w-2/3" />
+            <Skeleton className="h-3 bg-gray-200 w-1/3" />
+          </CardContent>
+        </Card>
+      ))}
+    </div>
+  );
+}
+
+// Empty Database State
+function EmptyDatabaseState() {
+  return (
+    <Card>
+      <CardContent className="p-8 text-center">
+        <FolderOpen className="h-12 w-12 mx-auto text-gray-400 mb-3" />
+        <h3 className="text-lg font-medium text-gray-900 mb-1">
+          Select a Database
+        </h3>
+        <p className="text-sm text-gray-600">
+          Choose a database to view its collections
+        </p>
+      </CardContent>
+    </Card>
   );
 }

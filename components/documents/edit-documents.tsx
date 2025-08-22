@@ -1,9 +1,17 @@
 "use client";
 
 import { useState } from "react";
-import { X, Save, Eye, ArrowLeft, Code } from "lucide-react";
+import {
+  X,
+  Save,
+  Eye,
+  ArrowLeft,
+  Code,
+  AlertCircle,
+  CheckCircle2,
+  FileEdit,
+} from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { toast } from "sonner";
 import JsonDiffViewer from "@/components/documents/json-diff-viewer";
@@ -32,178 +40,6 @@ interface JsonChange {
   newValue?: any;
 }
 
-interface DocumentHeaderProps {
-  viewMode: ViewMode;
-  document: IDocument;
-  onClose: () => void;
-  onBack: () => void;
-}
-
-interface ModeTabsProps {
-  viewMode: ViewMode;
-  onModeChange: (mode: ViewMode) => void;
-  onFormatJson: () => void;
-  hasJsonError: boolean;
-}
-
-interface DocumentFooterProps {
-  viewMode: ViewMode;
-  onClose: () => void;
-  onSave: () => void;
-  onReviewAndSave: () => void;
-  onBackToEdit: () => void;
-  hasJsonError: boolean;
-  isLoading: boolean;
-}
-
-const DocumentHeader = ({
-  viewMode,
-  document,
-  onClose,
-  onBack,
-}: DocumentHeaderProps) => (
-  <div className="p-4 border-b bg-gray-50">
-    <div className="flex items-center justify-between">
-      <div className="flex items-center gap-4">
-        {viewMode === "review" && (
-          <Button
-            variant="ghost"
-            size="sm"
-            onClick={onBack}
-            className="cursor-pointer"
-          >
-            <ArrowLeft className="h-4 w-4 mr-2" />
-            Back to Edit
-          </Button>
-        )}
-        <div>
-          <h3 className="text-lg font-semibold text-gray-800">
-            {viewMode === "review" ? "Review Changes" : "Edit Document"}
-          </h3>
-          <p className="text-sm text-gray-600 font-json">{document?._id}</p>
-        </div>
-      </div>
-      <Button
-        variant="ghost"
-        size="sm"
-        onClick={onClose}
-        className="cursor-pointer"
-      >
-        <X className="h-4 w-4" />
-      </Button>
-    </div>
-  </div>
-);
-
-// Mode Tabs Component
-const ModeTabs = ({
-  viewMode,
-  onModeChange,
-  onFormatJson,
-  hasJsonError,
-}: ModeTabsProps) => {
-  if (viewMode === "review") return null;
-
-  return (
-    <div className="px-4 py-4">
-      <div className="flex items-center gap-2">
-        <Button
-          variant={viewMode === "json" ? "default" : "outline"}
-          size="sm"
-          onClick={() => onModeChange("json")}
-          className="cursor-pointer"
-        >
-          JSON Mode
-        </Button>
-        <Button
-          variant={viewMode === "table" ? "default" : "outline"}
-          size="sm"
-          onClick={() => onModeChange("table")}
-          className="cursor-pointer"
-        >
-          Table Mode
-        </Button>
-        {viewMode === "json" && (
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={onFormatJson}
-            className="cursor-pointer ml-auto bg-transparent"
-            disabled={hasJsonError}
-          >
-            <Code className="h-4 w-4 mr-2" />
-            Format
-          </Button>
-        )}
-      </div>
-    </div>
-  );
-};
-
-const DocumentFooter = ({
-  viewMode,
-  onClose,
-  onSave,
-  onReviewAndSave,
-  onBackToEdit,
-  hasJsonError,
-  isLoading,
-}: DocumentFooterProps) => (
-  <div className="p-4 border-t bg-gray-50">
-    <div className="flex items-center justify-end gap-2">
-      {viewMode === "json" && (
-        <>
-          <Button
-            variant="outline"
-            onClick={onClose}
-            className="cursor-pointer bg-transparent"
-            disabled={isLoading}
-          >
-            Cancel
-          </Button>
-          <Button
-            variant="outline"
-            onClick={onSave}
-            disabled={hasJsonError || isLoading}
-            className="cursor-pointer"
-          >
-            <Save className="h-4 w-4 mr-2" />
-            {isLoading ? "Saving..." : "Save"}
-          </Button>
-          <Button
-            onClick={onReviewAndSave}
-            disabled={hasJsonError || isLoading}
-            className="cursor-pointer"
-          >
-            <Eye className="h-4 w-4 mr-2" />
-            Review & Save
-          </Button>
-        </>
-      )}
-      {viewMode === "review" && (
-        <>
-          <Button
-            variant="outline"
-            onClick={onBackToEdit}
-            className="cursor-pointer"
-            disabled={isLoading}
-          >
-            Back to Edit
-          </Button>
-          <Button
-            onClick={onSave}
-            className="cursor-pointer"
-            disabled={isLoading}
-          >
-            <Save className="h-4 w-4 mr-2" />
-            {isLoading ? "Saving..." : "Confirm Save"}
-          </Button>
-        </>
-      )}
-    </div>
-  </div>
-);
-
 export default function EditDocument({
   connectionId,
   database,
@@ -213,11 +49,9 @@ export default function EditDocument({
   onClose,
   onSave,
 }: EditDocumentProps) {
+  // All hooks must be called before any early returns
   const [viewMode, setViewMode] = useState<ViewMode>("json");
   const [isLoading, setIsLoading] = useState<boolean>(false);
-
-  // Early return if modal is not open
-  if (!isOpen) return null;
 
   const document_without_id = JSON.parse(JSON.stringify(document));
   document_without_id._id = undefined;
@@ -226,6 +60,9 @@ export default function EditDocument({
     JSON.stringify(document_without_id, null, 2),
   );
   const [jsonError, setJsonError] = useState<string | null>(null);
+
+  // Early return AFTER all hooks
+  if (!isOpen) return null;
 
   const handleJsonChange = (value: string) => {
     setEditedJson(value);
@@ -250,7 +87,6 @@ export default function EditDocument({
       setEditedJson(formatted);
       setJsonError(null);
     } catch (error) {
-      // If JSON is invalid, don't format
       console.warn("Cannot format invalid JSON");
     }
   };
@@ -264,7 +100,6 @@ export default function EditDocument({
     try {
       setIsLoading(true);
 
-      // Validate connection
       if (!connectionId) {
         toast.error("Connection ID is missing");
         return;
@@ -278,7 +113,6 @@ export default function EditDocument({
         return;
       }
 
-      // Parse and save the updated document
       const updatedDocument = JSON.parse(editedJson);
 
       const response = await saveADocument(
@@ -314,64 +148,217 @@ export default function EditDocument({
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex bg-white/20 backdrop-blur-sm">
-      <div className="flex-1" onClick={onClose} />
-      <div className="w-2/3 bg-white shadow-xl overflow-hidden flex flex-col">
+    <div className="fixed inset-0 z-50 flex">
+      {/* Backdrop */}
+      <div
+        className="absolute inset-0 bg-black/10 backdrop-blur-[2px]"
+        onClick={onClose}
+      />
+
+      {/* Main Container */}
+      <div className="ml-auto relative bg-white w-full max-w-4xl h-full shadow-2xl border-l border-gray-200 flex flex-col">
         {/* Header */}
-        <DocumentHeader
-          viewMode={viewMode}
-          document={document}
-          onClose={onClose}
-          onBack={() => {
-            setViewMode("json");
-          }}
-        />
+        <div className="shrink-0 bg-white border-b border-gray-100">
+          <div className="flex items-center justify-between p-6">
+            <div className="flex items-center gap-4">
+              <div className="flex items-center gap-3">
+                <div className="h-10 w-10 bg-blue-50 rounded-lg flex items-center justify-center">
+                  <FileEdit className="h-5 w-5 text-blue-600" />
+                </div>
+                <div>
+                  <h2 className="text-xl font-semibold text-gray-900">
+                    {viewMode === "review" ? "Review Changes" : "Edit Document"}
+                  </h2>
+                  <div className="flex items-center gap-2 mt-1">
+                    <Badge variant="outline" className="text-xs">
+                      ID: {document?._id}
+                    </Badge>
+                  </div>
+                </div>
+              </div>
+            </div>
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={onClose}
+              className="h-10 w-10 p-0"
+            >
+              <X className="h-5 w-5" />
+            </Button>
+          </div>
 
-        {/* Content */}
-        <ModeTabs
-          viewMode={viewMode}
-          onModeChange={setViewMode}
-          onFormatJson={formatJson}
-          hasJsonError={!!jsonError}
-        />
+          {/* Mode Tabs & Actions */}
+          {viewMode !== "review" && (
+            <div className="px-6 pb-4">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-2">
+                  <Button
+                    variant={viewMode === "json" ? "default" : "ghost"}
+                    size="sm"
+                    onClick={() => setViewMode("json")}
+                    className="h-9"
+                  >
+                    JSON Editor
+                  </Button>
+                  <Button
+                    variant={viewMode === "table" ? "default" : "ghost"}
+                    size="sm"
+                    onClick={() => setViewMode("table")}
+                    className="h-9"
+                  >
+                    Table View
+                  </Button>
+                </div>
 
-        {/* Main Content */}
-        <div className="flex-1 overflow-hidden">
-          {/* JSON Editor*/}
-          {viewMode === "json" && (
-            <JsonEditor
-              value={editedJson}
-              onChange={handleJsonChange}
-              error={jsonError}
-            />
-          )}
-
-          {/* Table Editor*/}
-          {viewMode === "table" && <TableViewPlaceholder />}
-
-          {/* Table Editor*/}
-          {viewMode === "review" && (
-            <div className="h-full p-4 overflow-auto">
-              <JsonDiffViewer
-                originalObj={document}
-                modifiedObj={JSON.parse(editedJson)}
-              />
+                {viewMode === "json" && (
+                  <div className="flex items-center gap-2">
+                    {jsonError && (
+                      <div className="flex items-center gap-2 text-red-600 bg-red-50 px-3 py-1.5 rounded-md">
+                        <AlertCircle className="h-4 w-4" />
+                        <span className="text-sm font-medium">JSON Error</span>
+                      </div>
+                    )}
+                    {!jsonError && editedJson.trim() && (
+                      <div className="flex items-center gap-2 text-green-600 bg-green-50 px-3 py-1.5 rounded-md">
+                        <CheckCircle2 className="h-4 w-4" />
+                        <span className="text-sm font-medium">Valid JSON</span>
+                      </div>
+                    )}
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={formatJson}
+                      disabled={!!jsonError}
+                      className="h-9"
+                    >
+                      <Code className="h-4 w-4 mr-2" />
+                      Format
+                    </Button>
+                  </div>
+                )}
+              </div>
             </div>
           )}
         </div>
 
-        {/* Footer Actions */}
-        <DocumentFooter
-          viewMode={viewMode}
-          onClose={onClose}
-          onSave={handleSaveDocument}
-          onReviewAndSave={handleReviewAndSave}
-          onBackToEdit={() => {
-            setViewMode("json");
-          }}
-          hasJsonError={!!jsonError}
-          isLoading={isLoading}
-        />
+        {/* Error Display */}
+        {jsonError && (
+          <div className="shrink-0 bg-red-50 border-b border-red-200 px-6 py-3">
+            <div className="flex items-start gap-3">
+              <AlertCircle className="h-5 w-5 text-red-500 mt-0.5 shrink-0" />
+              <div>
+                <p className="text-sm font-medium text-red-800">
+                  JSON Syntax Error
+                </p>
+                <p className="text-sm text-red-700 mt-1">{jsonError}</p>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* Main Content */}
+        <div className="flex-1 overflow-hidden bg-gray-50/30">
+          {/* JSON Editor */}
+          {viewMode === "json" && (
+            <div className="h-full">
+              <JsonEditor
+                value={editedJson}
+                onChange={handleJsonChange}
+                error={jsonError}
+              />
+            </div>
+          )}
+
+          {/* Table Editor */}
+          {viewMode === "table" && (
+            <div className="h-full p-6 flex items-center justify-center">
+              <TableViewPlaceholder />
+            </div>
+          )}
+
+          {/* Review Mode */}
+          {viewMode === "review" && (
+            <div className="h-full">
+              <div className="p-6">
+                <div className="bg-white rounded-lg border border-gray-200 overflow-hidden">
+                  <div className="bg-gray-50 px-4 py-3 border-b border-gray-200">
+                    <h3 className="text-sm font-medium text-gray-900">
+                      Changes Preview
+                    </h3>
+                    <p className="text-xs text-gray-600 mt-1">
+                      Review your modifications before saving
+                    </p>
+                  </div>
+                  <div className="overflow-auto max-h-[calc(100vh-300px)]">
+                    <JsonDiffViewer
+                      originalObj={document}
+                      modifiedObj={JSON.parse(editedJson)}
+                    />
+                  </div>
+                </div>
+              </div>
+            </div>
+          )}
+        </div>
+
+        {/* Footer */}
+        <div className="shrink-0 bg-white border-t border-gray-100 p-6">
+          <div className="flex items-center justify-between">
+            <div className="text-sm text-gray-600">
+              {viewMode === "json" && !jsonError && (
+                <span>Document is ready to save</span>
+              )}
+              {viewMode === "review" && (
+                <span>Review completed • Ready to save changes</span>
+              )}
+            </div>
+
+            <div className="flex items-center gap-3">
+              {viewMode === "json" && (
+                <>
+                  <Button
+                    variant="ghost"
+                    onClick={onClose}
+                    disabled={isLoading}
+                  >
+                    Cancel
+                  </Button>
+                  <Button
+                    variant="outline"
+                    onClick={handleSaveDocument}
+                    disabled={!!jsonError || isLoading}
+                  >
+                    <Save className="h-4 w-4 mr-2" />
+                    {isLoading ? "Saving..." : "Save"}
+                  </Button>
+                  <Button
+                    onClick={handleReviewAndSave}
+                    disabled={!!jsonError || isLoading}
+                  >
+                    <Eye className="h-4 w-4 mr-2" />
+                    Review & Save
+                  </Button>
+                </>
+              )}
+
+              {viewMode === "review" && (
+                <>
+                  <Button
+                    variant="ghost"
+                    onClick={() => setViewMode("json")}
+                    disabled={isLoading}
+                  >
+                    Back to Edit
+                  </Button>
+                  <Button onClick={handleSaveDocument} disabled={isLoading}>
+                    <Save className="h-4 w-4 mr-2" />
+                    {isLoading ? "Saving..." : "Confirm Save"}
+                  </Button>
+                </>
+              )}
+            </div>
+          </div>
+        </div>
       </div>
     </div>
   );
