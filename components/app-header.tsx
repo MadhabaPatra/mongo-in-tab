@@ -167,14 +167,13 @@ export function AppHeader({ type }: { type: string }) {
                   </span>
                   <Tooltip>
                     <TooltipTrigger asChild>
-                      <div className="flex items-center space-x-1 text-xs text-muted-foreground hover:text-foreground transition-colors cursor-help">
+                      <div className="flex items-center space-x-1 text-xs text-muted-foreground hover:text-foreground transition-colors">
                         <span>#{currentConnection.id}</span>
                         <Info className="h-3 w-3" />
                       </div>
                     </TooltipTrigger>
                     <TooltipContent side="bottom" className="max-w-xs">
                       <div className="text-center space-y-1">
-                        <p className="font-medium">Local Connection</p>
                         <p className="text-xs">
                           All data runs in your browser — nothing stored on
                           servers.
@@ -236,11 +235,10 @@ export function AppHeader({ type }: { type: string }) {
                   <span>#{currentConnection.id}</span>
                   <Tooltip>
                     <TooltipTrigger asChild>
-                      <Info className="h-3 w-3 cursor-help hover:text-foreground transition-colors" />
+                      <Info className="h-3 w-3 hover:text-foreground transition-colors" />
                     </TooltipTrigger>
                     <TooltipContent side="top" className="max-w-xs">
                       <div className="text-center space-y-1">
-                        <p className="font-medium">Local Connection</p>
                         <p className="text-xs">
                           All data runs in your browser — nothing stored on
                           servers.

@@ -1,7 +1,7 @@
 "use client";
 
 import type React from "react";
-import { useState, useMemo } from "react";
+import { useState, useMemo, useEffect } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -36,7 +36,6 @@ export default function JsonDiffViewer({
     ): JsonChange[] => {
       const changes: JsonChange[] = [];
 
-      // Get all unique keys from both objects
       const originalKeys =
         original && typeof original === "object" ? Object.keys(original) : [];
       const modifiedKeys =
@@ -50,14 +49,12 @@ export default function JsonDiffViewer({
         const modifiedValue = modified?.[key];
 
         if (!(key in (original || {}))) {
-          // Added field
           changes.push({
             type: "added",
             path: currentPath,
             newValue: modifiedValue,
           });
         } else if (!(key in (modified || {}))) {
-          // Removed field
           changes.push({
             type: "removed",
             path: currentPath,
@@ -66,14 +63,12 @@ export default function JsonDiffViewer({
         } else if (
           JSON.stringify(originalValue) !== JSON.stringify(modifiedValue)
         ) {
-          // Modified field
           if (
             typeof originalValue === "object" &&
             typeof modifiedValue === "object" &&
             originalValue !== null &&
             modifiedValue !== null
           ) {
-            // Recursively check nested objects
             changes.push(
               ...generateChanges(originalValue, modifiedValue, currentPath),
             );
@@ -85,14 +80,6 @@ export default function JsonDiffViewer({
               newValue: modifiedValue,
             });
           }
-        } else {
-          // Unchanged field (for completeness)
-          changes.push({
-            type: "unchanged",
-            path: currentPath,
-            oldValue: originalValue,
-            newValue: modifiedValue,
-          });
         }
       }
 
@@ -102,8 +89,25 @@ export default function JsonDiffViewer({
     return generateChanges(originalObj, modifiedObj);
   }, [originalObj, modifiedObj]);
 
+  const significantChanges = useMemo(
+    () => changes.filter((change) => change.type !== "unchanged"),
+    [changes],
+  );
+
+  // Switch away from side-by-side if no changes exist
+  useEffect(() => {
+    if (activeTab === "side-by-side" && significantChanges.length === 0) {
+      setActiveTab("field-wise");
+    }
+  }, [activeTab, significantChanges.length]);
+
   const generateLineDiff = useMemo(() => {
-    // Normalize JSON by parsing and stringifying to ignore formatting
+    // Remove _id from both objects for comparison
+    const cleanOriginal = { ...originalObj };
+    const cleanModified = { ...modifiedObj };
+    delete cleanOriginal._id;
+    delete cleanModified._id;
+
     const normalizeJson = (obj: any) => {
       try {
         return JSON.stringify(obj, Object.keys(obj).sort(), 2);
@@ -112,8 +116,8 @@ export default function JsonDiffViewer({
       }
     };
 
-    const originalLines = normalizeJson(originalObj).split("\n");
-    const modifiedLines = normalizeJson(modifiedObj).split("\n");
+    const originalLines = normalizeJson(cleanOriginal).split("\n");
+    const modifiedLines = normalizeJson(cleanModified).split("\n");
     const maxLines = Math.max(originalLines.length, modifiedLines.length);
 
     const lineDiff = [];
@@ -121,7 +125,6 @@ export default function JsonDiffViewer({
       const originalLine = originalLines[i] || "";
       const modifiedLine = modifiedLines[i] || "";
 
-      // Ignore whitespace-only differences
       const normalizedOriginal = originalLine.trim();
       const normalizedModified = modifiedLine.trim();
 
@@ -151,41 +154,36 @@ export default function JsonDiffViewer({
     return lineDiff;
   }, [originalObj, modifiedObj]);
 
-  const significantChanges = useMemo(
-    () => changes.filter((change) => change.type !== "unchanged"),
-    [changes],
-  );
-
   const getChangeIcon = (type: string) => {
     switch (type) {
       case "added":
-        return <Plus className="h-3 w-3" />;
+        return <Plus className="h-4 w-4" />;
       case "removed":
-        return <Minus className="h-3 w-3" />;
+        return <Minus className="h-4 w-4" />;
       case "modified":
-        return <Edit3 className="h-3 w-3" />;
+        return <Edit3 className="h-4 w-4" />;
       default:
         return null;
     }
   };
 
-  const getChangeBadgeVariant = (type: string) => {
+  const getChangeBadgeClass = (type: string) => {
     switch (type) {
       case "added":
-        return "bg-green-500/10 text-green-700 border-green-200";
+        return "bg-green-50 text-green-700 border-green-200";
       case "removed":
-        return "bg-red-500/10 text-red-700 border-red-200";
+        return "bg-red-50 text-red-700 border-red-200";
       case "modified":
-        return "bg-orange-500/10 text-orange-700 border-orange-200";
+        return "bg-orange-50 text-orange-700 border-orange-200";
       default:
-        return "bg-muted text-muted-foreground";
+        return "bg-gray-50 text-gray-600";
     }
   };
 
   if (isLoading) {
     return (
-      <Card className="border-muted/40">
-        <CardHeader className="pb-3">
+      <Card>
+        <CardHeader>
           <Skeleton className="h-5 w-32" />
         </CardHeader>
         <CardContent className="space-y-3">
@@ -199,98 +197,96 @@ export default function JsonDiffViewer({
 
   return (
     <div className="space-y-4">
-      <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
-        <TabsList className="grid w-full grid-cols-2 bg-muted/30">
+      <Tabs value={activeTab} onValueChange={setActiveTab}>
+        <TabsList className="grid w-full grid-cols-3">
           <TabsTrigger value="field-wise" className="flex items-center gap-2">
             <List className="h-4 w-4" />
-            Field-wise
+            Field Changes
           </TabsTrigger>
           <TabsTrigger value="line-by-line" className="flex items-center gap-2">
             <GitCompare className="h-4 w-4" />
-            Line-by-line
+            Line Diff
+          </TabsTrigger>
+          <TabsTrigger value="side-by-side" className="flex items-center gap-2">
+            <FileText className="h-4 w-4" />
+            Side by Side
           </TabsTrigger>
         </TabsList>
 
-        <TabsContent value="field-wise" className="space-y-4">
-          <Card className="border-muted/40">
-            <CardHeader className="pb-3">
-              <CardTitle className="flex items-center gap-2 text-base">
-                <FileText className="h-4 w-4 text-primary" />
-                Field Changes ({significantChanges.length})
+        <TabsContent value="field-wise">
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <FileText className="h-5 w-5" />
+                Changes ({significantChanges.length})
               </CardTitle>
             </CardHeader>
-            <CardContent className="pt-0">
+            <CardContent>
               {significantChanges.length === 0 ? (
-                <div className="text-sm text-muted-foreground bg-muted/30 rounded-md p-3 border border-muted/40">
-                  No field changes detected
+                <div className="text-center py-8 text-gray-500">
+                  No changes detected
                 </div>
               ) : (
-                <div className="space-y-3">
+                <div className="space-y-4">
                   {significantChanges.map((change, index) => (
                     <div
                       key={index}
-                      className="border border-muted/40 rounded-md p-3 bg-muted/20"
+                      className="border rounded-lg p-4 space-y-3"
                     >
-                      <div className="flex items-center gap-2 mb-2">
-                        <Badge
-                          className={`text-xs font-medium ${getChangeBadgeVariant(change.type)}`}
-                        >
+                      <div className="flex items-center gap-2">
+                        <Badge className={getChangeBadgeClass(change.type)}>
                           {getChangeIcon(change.type)}
                           {change.type.toUpperCase()}
                         </Badge>
-                        <code className="text-sm font-mono text-primary bg-background px-2 py-1 rounded border">
+                        <code className="text-sm bg-gray-100 px-2 py-1 rounded">
                           {change.path}
                         </code>
                       </div>
 
-                      <div className="space-y-2 text-xs font-mono">
-                        {change.type === "added" && (
-                          <div className="bg-green-500/10 border border-green-200 rounded p-2">
-                            <div className="flex items-start gap-2">
-                              <span className="text-green-600 font-bold">
-                                +
-                              </span>
-                              <code className="text-green-800 break-all">
-                                {JSON.stringify(change.newValue, null, 2)}
-                              </code>
-                            </div>
+                      {change.type === "added" && (
+                        <div className="bg-green-50 border border-green-200 rounded p-3">
+                          <div className="flex gap-2">
+                            <span className="text-green-600 font-bold">+</span>
+                            <code className="text-sm text-green-800 break-all">
+                              {JSON.stringify(change.newValue, null, 2)}
+                            </code>
                           </div>
-                        )}
-                        {change.type === "removed" && (
-                          <div className="bg-red-500/10 border border-red-200 rounded p-2">
-                            <div className="flex items-start gap-2">
+                        </div>
+                      )}
+
+                      {change.type === "removed" && (
+                        <div className="bg-red-50 border border-red-200 rounded p-3">
+                          <div className="flex gap-2">
+                            <span className="text-red-600 font-bold">-</span>
+                            <code className="text-sm text-red-800 break-all">
+                              {JSON.stringify(change.oldValue, null, 2)}
+                            </code>
+                          </div>
+                        </div>
+                      )}
+
+                      {change.type === "modified" && (
+                        <div className="space-y-2">
+                          <div className="bg-red-50 border border-red-200 rounded p-3">
+                            <div className="flex gap-2">
                               <span className="text-red-600 font-bold">-</span>
-                              <code className="text-red-800 break-all">
+                              <code className="text-sm text-red-800 break-all">
                                 {JSON.stringify(change.oldValue, null, 2)}
                               </code>
                             </div>
                           </div>
-                        )}
-                        {change.type === "modified" && (
-                          <div className="space-y-1">
-                            <div className="bg-red-500/10 border border-red-200 rounded p-2">
-                              <div className="flex items-start gap-2">
-                                <span className="text-red-600 font-bold">
-                                  -
-                                </span>
-                                <code className="text-red-800 break-all">
-                                  {JSON.stringify(change.oldValue, null, 2)}
-                                </code>
-                              </div>
-                            </div>
-                            <div className="bg-green-500/10 border border-green-200 rounded p-2">
-                              <div className="flex items-start gap-2">
-                                <span className="text-green-600 font-bold">
-                                  +
-                                </span>
-                                <code className="text-green-800 break-all">
-                                  {JSON.stringify(change.newValue, null, 2)}
-                                </code>
-                              </div>
+                          <div className="bg-green-50 border border-green-200 rounded p-3">
+                            <div className="flex gap-2">
+                              <span className="text-green-600 font-bold">
+                                +
+                              </span>
+                              <code className="text-sm text-green-800 break-all">
+                                {JSON.stringify(change.newValue, null, 2)}
+                              </code>
                             </div>
                           </div>
-                        )}
-                      </div>
+                        </div>
+                      )}
                     </div>
                   ))}
                 </div>
@@ -299,68 +295,68 @@ export default function JsonDiffViewer({
           </Card>
         </TabsContent>
 
-        <TabsContent value="line-by-line" className="space-y-4">
-          <Card className="border-muted/40">
-            <CardHeader className="pb-3">
-              <CardTitle className="flex items-center gap-2 text-base">
-                <GitCompare className="h-4 w-4 text-primary" />
-                Line-by-line Comparison ({generateLineDiff.length} changes)
+        <TabsContent value="line-by-line">
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <GitCompare className="h-5 w-5" />
+                Line Changes ({generateLineDiff.length})
               </CardTitle>
             </CardHeader>
-            <CardContent className="pt-0">
+            <CardContent>
               {generateLineDiff.length === 0 ? (
-                <div className="text-sm text-muted-foreground bg-muted/30 rounded-md p-3 border border-muted/40">
+                <div className="text-center py-8 text-gray-500">
                   No line differences detected
                 </div>
               ) : (
-                <div className="bg-background border border-muted/40 rounded-md overflow-hidden">
+                <div className="border rounded-lg overflow-hidden">
                   <div className="max-h-96 overflow-auto">
                     {generateLineDiff.map((diff, index) => (
                       <div
                         key={index}
-                        className="border-b border-muted/20 last:border-b-0"
+                        className="border-b border-gray-100 last:border-b-0"
                       >
                         {diff.type === "removed" && (
-                          <div className="bg-red-500/5 px-4 py-2 flex items-start gap-3">
-                            <span className="text-xs text-muted-foreground font-mono w-8 text-right">
+                          <div className="bg-red-50 px-4 py-2 flex items-start gap-3">
+                            <span className="text-xs text-gray-500 font-mono w-8 text-right">
                               {diff.lineNumber}
                             </span>
                             <span className="text-red-600 font-bold">-</span>
-                            <code className="text-xs font-mono text-red-800 flex-1 break-all">
+                            <code className="text-sm font-mono text-red-800 flex-1">
                               {diff.content}
                             </code>
                           </div>
                         )}
                         {diff.type === "added" && (
-                          <div className="bg-green-500/5 px-4 py-2 flex items-start gap-3">
-                            <span className="text-xs text-muted-foreground font-mono w-8 text-right">
+                          <div className="bg-green-50 px-4 py-2 flex items-start gap-3">
+                            <span className="text-xs text-gray-500 font-mono w-8 text-right">
                               {diff.lineNumber}
                             </span>
                             <span className="text-green-600 font-bold">+</span>
-                            <code className="text-xs font-mono text-green-800 flex-1 break-all">
+                            <code className="text-sm font-mono text-green-800 flex-1">
                               {diff.content}
                             </code>
                           </div>
                         )}
                         {diff.type === "modified" && (
                           <div>
-                            <div className="bg-red-500/5 px-4 py-2 flex items-start gap-3">
-                              <span className="text-xs text-muted-foreground font-mono w-8 text-right">
+                            <div className="bg-red-50 px-4 py-2 flex items-start gap-3">
+                              <span className="text-xs text-gray-500 font-mono w-8 text-right">
                                 {diff.lineNumber}
                               </span>
                               <span className="text-red-600 font-bold">-</span>
-                              <code className="text-xs font-mono text-red-800 flex-1 break-all">
+                              <code className="text-sm font-mono text-red-800 flex-1">
                                 {diff.originalContent}
                               </code>
                             </div>
-                            <div className="bg-green-500/5 px-4 py-2 flex items-start gap-3">
-                              <span className="text-xs text-muted-foreground font-mono w-8 text-right">
+                            <div className="bg-green-50 px-4 py-2 flex items-start gap-3">
+                              <span className="text-xs text-gray-500 font-mono w-8 text-right">
                                 {diff.lineNumber}
                               </span>
                               <span className="text-green-600 font-bold">
                                 +
                               </span>
-                              <code className="text-xs font-mono text-green-800 flex-1 break-all">
+                              <code className="text-sm font-mono text-green-800 flex-1">
                                 {diff.modifiedContent}
                               </code>
                             </div>
@@ -374,40 +370,47 @@ export default function JsonDiffViewer({
             </CardContent>
           </Card>
         </TabsContent>
+
+        {significantChanges.length > 0 && (
+          <TabsContent value="side-by-side">
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+              <Card>
+                <CardHeader>
+                  <CardTitle className="text-base">Original</CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <div className="bg-gray-50 rounded p-4 h-96 overflow-auto">
+                    <pre className="text-sm font-mono whitespace-pre-wrap">
+                      {JSON.stringify(
+                        Object.fromEntries(
+                          Object.entries(originalObj).filter(
+                            ([key]) => key !== "_id",
+                          ),
+                        ),
+                        null,
+                        2,
+                      )}
+                    </pre>
+                  </div>
+                </CardContent>
+              </Card>
+
+              <Card>
+                <CardHeader>
+                  <CardTitle className="text-base">Modified</CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <div className="bg-gray-50 rounded p-4 h-96 overflow-auto">
+                    <pre className="text-sm font-mono whitespace-pre-wrap">
+                      {JSON.stringify(modifiedObj, null, 2)}
+                    </pre>
+                  </div>
+                </CardContent>
+              </Card>
+            </div>
+          </TabsContent>
+        )}
       </Tabs>
-
-      {/* Side-by-side JSON view */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
-        <Card className="border-muted/40">
-          <CardHeader className="pb-3">
-            <CardTitle className="text-sm font-medium text-muted-foreground">
-              Original Document
-            </CardTitle>
-          </CardHeader>
-          <CardContent className="pt-0">
-            <div className="bg-muted/20 border border-muted/40 rounded-md p-4 h-64 overflow-auto">
-              <pre className="text-xs font-mono text-foreground whitespace-pre-wrap leading-relaxed">
-                {JSON.stringify(originalObj, null, 2)}
-              </pre>
-            </div>
-          </CardContent>
-        </Card>
-
-        <Card className="border-muted/40">
-          <CardHeader className="pb-3">
-            <CardTitle className="text-sm font-medium text-muted-foreground">
-              Modified Document
-            </CardTitle>
-          </CardHeader>
-          <CardContent className="pt-0">
-            <div className="bg-muted/20 border border-muted/40 rounded-md p-4 h-64 overflow-auto">
-              <pre className="text-xs font-mono text-foreground whitespace-pre-wrap leading-relaxed">
-                {JSON.stringify(modifiedObj, null, 2)}
-              </pre>
-            </div>
-          </CardContent>
-        </Card>
-      </div>
     </div>
   );
 }
