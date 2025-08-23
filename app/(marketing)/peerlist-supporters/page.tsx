@@ -22,7 +22,11 @@ export default function PeerlistSupportersPage() {
 
   const fetchSupporters = async () => {
     try {
-      const response = await fetch("/api/peerlist-supporters");
+      const response = await fetch("/api/peerlist-supporters", {
+        next: {
+          revalidate: 5,
+        },
+      });
 
       if (!response.ok) {
         throw new Error("Failed to fetch supporters");
