@@ -101,11 +101,6 @@ export function FilterDocuments({
         >
           <Filter className="h-4 w-4" />
           Filter
-          {hasActiveFilter && (
-            <span className="bg-background/20 px-1.5 py-0.5 rounded text-xs">
-              Active
-            </span>
-          )}
         </Button>
       </DialogTrigger>
 
