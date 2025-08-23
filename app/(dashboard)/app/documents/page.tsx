@@ -77,7 +77,7 @@ export default function DocumentsPage() {
       router.replace(`?${params.toString()}`);
       loadDocuments(25, 1);
     }
-  }, [currentCollection]);
+  }, [currentCollection, mongoQuery]);
 
   const loadCollections = async () => {
     setIsLoadingCollections(true);
@@ -163,9 +163,6 @@ export default function DocumentsPage() {
 
   const handleClearFilter = () => {
     setMongoQuery("{}");
-    if (currentCollection) {
-      loadDocuments(25, 1);
-    }
   };
 
   const handlePaginationChange = (limit: number, pageNo: number) => {
@@ -174,9 +171,6 @@ export default function DocumentsPage() {
 
   const handleFilterApplied = (query: string) => {
     setMongoQuery(query);
-    if (currentCollection) {
-      loadDocuments(25, 1);
-    }
   };
 
   const handleCollectionChange = (collectionName: string) => {
@@ -307,10 +301,8 @@ export default function DocumentsPage() {
             {mongoQuery !== "{}" && mongoQuery.trim() && (
               <div className="flex items-center justify-between max-w-7xl mx-auto">
                 <div className="flex items-center space-x-3">
-                  <Filter className="h-4 w-4 text-blue-600" />
-                  <span className="text-sm text-blue-700">Filter active</span>
                   <Badge variant="secondary" className="font-mono text-xs">
-                    Query
+                    {mongoQuery}
                   </Badge>
                 </div>
                 <Button
