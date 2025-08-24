@@ -68,7 +68,7 @@ async function getUserProfile(username) {
 
     return {
       role: "Community member",
-      company: "Peerlist Community",
+      company: "Peerlist",
     };
   } catch (error) {
     console.error(`Error fetching profile for ${username}:`, error);
@@ -103,7 +103,7 @@ async function analyzeCommentsWithOpenAI(comments) {
           {
             role: "system",
             content:
-              "You are a sentiment analyzer. Analyze the following comments about a MongoDB Browser tool and return ONLY the IDs of positive testimonial-worthy comments. Return as a JSON array of IDs. Exclude negative, neutral, or off-topic comments. It should be specific to Prpject only.",
+              "You are a sentiment analyzer. Analyze the following comments about a MongoDB Browser tool and return ONLY the IDs of positive testimonial-worthy comments. Return as a JSON array of IDs. Exclude negative or off-topic comments.",
           },
           {
             role: "user",

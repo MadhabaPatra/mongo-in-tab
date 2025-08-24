@@ -47,13 +47,7 @@ export function TestimonialSection() {
           const data = await response.json();
           if (data.testimonials && data.testimonials.length > 0) {
             // Ensure we have at least 6 testimonials for smooth scrolling
-            let fetchedTestimonials = data.testimonials;
-            while (fetchedTestimonials.length < 6) {
-              fetchedTestimonials = [
-                ...fetchedTestimonials,
-                ...data.testimonials,
-              ];
-            }
+            setTestimonials([...data.testimonials, ...data.testimonials]);
           }
         }
       } catch (error) {
@@ -65,9 +59,6 @@ export function TestimonialSection() {
 
     fetchTestimonials();
   }, []);
-
-  // Duplicate testimonials for seamless infinite scroll
-  const duplicatedTestimonials = [...testimonials, ...testimonials];
 
   return (
     <section className="relative py-16 sm:py-20 lg:py-24 bg-background overflow-hidden">
@@ -88,13 +79,13 @@ export function TestimonialSection() {
           </div>
           <div className="animate-fade-in-up animate-delay-200">
             <p className="text-sm sm:text-base md:text-lg lg:text-xl text-muted-foreground max-w-4xl mx-auto leading-relaxed px-4 sm:px-0">
-              See what developers are saying about MongoDB Browser
+              See what developers are saying about MongoInTab
             </p>
           </div>
           <div className="animate-fade-in-up animate-delay-200 mt-4">
             <a
               href="/peerlist-supporters"
-              className="inline-flex items-center gap-2 text-primary hover:text-primary/80 transition-colors font-medium text-sm sm:text-base"
+              className="inline-flex items-center gap-2 text-primary hover:text-primary/80 transition-colors font-medium text-sm"
             >
               View all supporters
               <svg
@@ -126,7 +117,7 @@ export function TestimonialSection() {
           <div
             className={`flex gap-6 ${isPaused ? "animation-paused" : ""} infinite-scroll`}
           >
-            {duplicatedTestimonials.map((testimonial, index) => (
+            {testimonials.map((testimonial, index) => (
               <div
                 key={`${testimonial.id}-${index}`}
                 className="flex-shrink-0 w-[350px] md:w-[400px]"
@@ -163,58 +154,58 @@ export function TestimonialSection() {
         </div>
 
         {/* Second row scrolling in opposite direction NOT NEEDED AS OF NOW */}
-        {/*<div*/}
-        {/*  className="relative w-full overflow-hidden mt-6"*/}
-        {/*  onMouseEnter={() => setIsPaused(true)}*/}
-        {/*  onMouseLeave={() => setIsPaused(false)}*/}
-        {/*>*/}
-        {/*  /!* Gradient masks for fade effect *!/*/}
-        {/*  <div className="absolute left-0 top-0 bottom-0 w-32 bg-gradient-to-r from-background to-transparent z-10 pointer-events-none" />*/}
-        {/*  <div className="absolute right-0 top-0 bottom-0 w-32 bg-gradient-to-l from-background to-transparent z-10 pointer-events-none" />*/}
+        <div
+          className="relative w-full overflow-hidden mt-6"
+          onMouseEnter={() => setIsPaused(true)}
+          onMouseLeave={() => setIsPaused(false)}
+        >
+          {/* Gradient masks for fade effect */}
+          <div className="absolute left-0 top-0 bottom-0 w-32 bg-gradient-to-r from-background to-transparent z-10 pointer-events-none" />
+          <div className="absolute right-0 top-0 bottom-0 w-32 bg-gradient-to-l from-background to-transparent z-10 pointer-events-none" />
 
-        {/*  <div*/}
-        {/*    className={`flex gap-6 ${isPaused ? "animation-paused" : ""} infinite-scroll-reverse`}*/}
-        {/*  >*/}
-        {/*    {[...testimonials]*/}
-        {/*      .reverse()*/}
-        {/*      .concat([...testimonials].reverse())*/}
-        {/*      .map((testimonial, index) => (*/}
-        {/*        <div*/}
-        {/*          key={`${testimonial.id}-reverse-${index}`}*/}
-        {/*          className="flex-shrink-0 w-[350px] md:w-[400px]"*/}
-        {/*        >*/}
-        {/*          <Card className="h-full hover:shadow-xl transition-all duration-300 hover:scale-105 border-border/50 bg-background/80 backdrop-blur-sm cursor-pointer">*/}
-        {/*            <CardHeader className="pb-4">*/}
-        {/*              <div className="flex items-center space-x-4">*/}
-        {/*                <div className="relative w-12 h-12 sm:w-14 sm:h-14 rounded-full overflow-hidden bg-muted">*/}
-        {/*                  <img*/}
-        {/*                    src={testimonial.image}*/}
-        {/*                    alt={testimonial.name}*/}
-        {/*                    width={56}*/}
-        {/*                    height={56}*/}
-        {/*                    className="object-cover w-24 h-24"*/}
-        {/*                  />*/}
-        {/*                </div>*/}
-        {/*                <div className="flex-1">*/}
-        {/*                  <CardTitle className="text-base sm:text-lg font-semibold">*/}
-        {/*                    {testimonial.name}*/}
-        {/*                  </CardTitle>*/}
-        {/*                  <CardDescription className="text-xs sm:text-sm">*/}
-        {/*                    {testimonial.role} at {testimonial.company}*/}
-        {/*                  </CardDescription>*/}
-        {/*                </div>*/}
-        {/*              </div>*/}
-        {/*            </CardHeader>*/}
-        {/*            <CardContent>*/}
-        {/*              <p className="text-sm sm:text-base text-muted-foreground leading-relaxed italic">*/}
-        {/*                "{cleanHtmlContent(testimonial.quote)}"*/}
-        {/*              </p>*/}
-        {/*            </CardContent>*/}
-        {/*          </Card>*/}
-        {/*        </div>*/}
-        {/*      ))}*/}
-        {/*  </div>*/}
-        {/*</div>*/}
+          <div
+            className={`flex gap-6 ${isPaused ? "animation-paused" : ""} infinite-scroll-reverse`}
+          >
+            {[...testimonials]
+              .reverse()
+              .concat([...testimonials].reverse())
+              .map((testimonial, index) => (
+                <div
+                  key={`${testimonial.id}-reverse-${index}`}
+                  className="flex-shrink-0 w-[350px] md:w-[400px]"
+                >
+                  <Card className="h-full hover:shadow-xl transition-all duration-300 hover:scale-105 border-border/50 bg-background/80 backdrop-blur-sm cursor-pointer">
+                    <CardHeader className="pb-4">
+                      <div className="flex items-center space-x-4">
+                        <div className="relative w-12 h-12 sm:w-14 sm:h-14 rounded-full overflow-hidden bg-muted">
+                          <img
+                            src={testimonial.image}
+                            alt={testimonial.name}
+                            width={56}
+                            height={56}
+                            className="object-cover w-24 h-24"
+                          />
+                        </div>
+                        <div className="flex-1">
+                          <CardTitle className="text-base sm:text-lg font-semibold">
+                            {testimonial.name}
+                          </CardTitle>
+                          <CardDescription className="text-xs sm:text-sm">
+                            {testimonial.role} at {testimonial.company}
+                          </CardDescription>
+                        </div>
+                      </div>
+                    </CardHeader>
+                    <CardContent>
+                      <p className="text-sm sm:text-base text-muted-foreground leading-relaxed italic">
+                        "{cleanHtmlContent(testimonial.quote)}"
+                      </p>
+                    </CardContent>
+                  </Card>
+                </div>
+              ))}
+          </div>
+        </div>
       </div>
 
       <style jsx>{`
