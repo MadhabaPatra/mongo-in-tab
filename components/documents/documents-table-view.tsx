@@ -29,6 +29,7 @@ interface DocumentsTableViewProps {
   collectionName: string;
   fields: string[];
   documents: IDocument[];
+  onLoadDocuments: () => void;
 }
 
 export function DocumentsTableView({
@@ -37,6 +38,7 @@ export function DocumentsTableView({
   collectionName,
   fields,
   documents,
+  onLoadDocuments,
 }: DocumentsTableViewProps) {
   const [sidebarDocument, setSidebarDocument] = useState<IDocument | null>(
     null,
@@ -321,7 +323,7 @@ export function DocumentsTableView({
           onSave={(updatedDocument: any) => {
             setSidebarDocument(null);
             setEditDocumentOpen(false);
-            toast.success("Document updated successfully");
+            onLoadDocuments();
           }}
         />
       )}

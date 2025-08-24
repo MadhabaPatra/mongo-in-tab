@@ -36,6 +36,7 @@ import { AppHeader } from "@/components/app-header";
 import Link from "next/link";
 import { getDatabaseLink } from "@/lib/utils";
 import { FilterDocuments } from "@/components/documents/filter-documents";
+import { DocumentsCardView } from "@/components/documents/documents-card-view";
 
 export default function DocumentsPage() {
   const router = useRouter();
@@ -336,12 +337,27 @@ export default function DocumentsPage() {
             collectionName={currentCollection}
             documents={documents}
             fields={fields}
+            onLoadDocuments={() => {
+              loadDocuments(25, pagination.currentPage);
+            }}
+          />
+        ) : viewMode === "card" && connectionId && database ? (
+          <DocumentsCardView
+            connectionId={connectionId}
+            database={database}
+            collectionName={currentCollection}
+            documents={documents}
+            fields={fields}
+            onLoadDocuments={() => {
+              loadDocuments(25, pagination.currentPage);
+            }}
           />
         ) : (
           <Card>
             <CardContent className="p-6 text-center">
-              <Grid className="h-8 w-8 mx-auto text-gray-400 mb-2" />
-              <p className="text-sm text-gray-600">Card view coming soon</p>
+              <p className="text-sm text-red-600">
+                Invalid request <br /> Refresh
+              </p>
             </CardContent>
           </Card>
         )}

@@ -6,7 +6,6 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
-import Image from "next/image";
 import { useEffect, useState } from "react";
 
 interface Testimonial {
@@ -17,63 +16,6 @@ interface Testimonial {
   role: string;
   company: string;
 }
-
-const fallbackTestimonials: Testimonial[] = [
-  {
-    id: "1",
-    name: "Sarah Chen",
-    company: "TechStartup Inc.",
-    role: "Senior Developer",
-    image: "https://peerlist.io/images/emptyDP.png",
-    quote:
-      "MongoDB Browser has completely changed how we debug and manage our database. The fact that it runs entirely in the browser with no data leaving our machine is a game-changer for security.",
-  },
-  {
-    id: "2",
-    name: "Michael Rodriguez",
-    company: "DataFlow Systems",
-    role: "Backend Engineer",
-    image: "https://peerlist.io/images/emptyDP.png",
-    quote:
-      "Finally, a MongoDB tool that doesn't require complicated setup! I can connect to any database instantly and start working. It's become an essential part of my development workflow.",
-  },
-  {
-    id: "3",
-    name: "Emily Johnson",
-    company: "CloudNative Co.",
-    role: "DevOps Lead",
-    image: "https://peerlist.io/images/emptyDP.png",
-    quote:
-      "The simplicity and privacy-first approach is exactly what we needed. Our team can now safely browse production data without worrying about security compliance.",
-  },
-  {
-    id: "4",
-    name: "Alex Kim",
-    company: "FinTech Solutions",
-    role: "Full Stack Developer",
-    image: "https://peerlist.io/images/emptyDP.png",
-    quote:
-      "The intuitive interface and blazing-fast performance make MongoDB Browser my go-to tool for database management. It's saved us countless hours.",
-  },
-  {
-    id: "5",
-    name: "Jessica Liu",
-    company: "AI Innovations",
-    role: "Data Engineer",
-    image: "https://peerlist.io/images/emptyDP.png",
-    quote:
-      "Being able to export and manipulate data directly in the browser without any server-side processing is fantastic for our compliance requirements.",
-  },
-  {
-    id: "6",
-    name: "David Thompson",
-    company: "E-commerce Plus",
-    role: "Tech Lead",
-    image: "https://peerlist.io/images/emptyDP.png",
-    quote:
-      "MongoDB Browser has revolutionized our debugging process. The smart search and filtering capabilities are incredibly powerful.",
-  },
-];
 
 // Helper function to clean and format HTML content
 function cleanHtmlContent(html: string): string {
@@ -94,8 +36,7 @@ function cleanHtmlContent(html: string): string {
 
 export function TestimonialSection() {
   const [isPaused, setIsPaused] = useState(false);
-  const [testimonials, setTestimonials] =
-    useState<Testimonial[]>(fallbackTestimonials);
+  const [testimonials, setTestimonials] = useState<Testimonial[]>([]);
   const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
@@ -113,7 +54,6 @@ export function TestimonialSection() {
                 ...data.testimonials,
               ];
             }
-            setTestimonials(fetchedTestimonials.slice(0, 10));
           }
         }
       } catch (error) {
@@ -297,11 +237,11 @@ export function TestimonialSection() {
         }
 
         .infinite-scroll {
-          animation: scroll 40s linear infinite;
+          animation: scroll 20s linear infinite;
         }
 
         .infinite-scroll-reverse {
-          animation: scroll-reverse 45s linear infinite;
+          animation: scroll-reverse 22s linear infinite;
         }
 
         .animation-paused {
