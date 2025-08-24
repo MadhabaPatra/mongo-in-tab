@@ -4,6 +4,11 @@ export async function GET() {
   try {
     const response = await fetch(
       `https://peerlist.io/api/v1/users/projects/upvotes/list?projectId=${process.env.PEERLIST_PROJECT_ID}`,
+      {
+        next: {
+          revalidate: 0,
+        },
+      },
     );
 
     if (!response.ok) {
@@ -14,6 +19,7 @@ export async function GET() {
     }
 
     const data = await response.json();
+
     return NextResponse.json(data);
   } catch (error) {
     return NextResponse.json(

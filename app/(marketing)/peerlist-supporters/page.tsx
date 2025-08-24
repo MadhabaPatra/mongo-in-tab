@@ -24,7 +24,7 @@ export default function PeerlistSupportersPage() {
     try {
       const response = await fetch("/api/peerlist-supporters", {
         next: {
-          revalidate: 5,
+          revalidate: 0,
         },
       });
 
@@ -144,6 +144,10 @@ export default function PeerlistSupportersPage() {
                   }
                   alt={supporter.displayName}
                   className="w-20 h-20 rounded-full object-cover ring-2 ring-border group-hover:ring-primary transition-colors"
+                  onError={(e) => {
+                    e.currentTarget.src =
+                      "https://peerlist.io/images/emptyDP.png";
+                  }}
                 />
                 <div className="absolute -bottom-1 -right-1 w-6 h-6 bg-background rounded-full flex items-center justify-center">
                   <Zap className="w-3.5 h-3.5 text-yellow-500 fill-yello-500" />
