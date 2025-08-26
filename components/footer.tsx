@@ -1,4 +1,4 @@
-import { Database, Shield, Heart, Zap, Eye, Server } from "lucide-react";
+import { Shield, Heart, Zap, Eye, Server } from "lucide-react";
 import Link from "next/link";
 import Image from "next/image";
 
@@ -46,23 +46,7 @@ export function Footer() {
                 Open Source
               </a>
 
-              <a
-                href="https://peerlist.io/madhabapatra/project/mongointab"
-                target="_blank"
-                rel="noopener noreferrer"
-                className="inline-flex items-center gap-2 text-xs sm:text-sm font-medium text-foreground hover:text-primary transition-colors group w-fit"
-              >
-                <img
-                  className="h-3 w-3 sm:h-4 sm:w-4 group-hover:scale-110 rounded"
-                  src="https://dqy38fnwh4fqs.cloudfront.net/company/COMHQ7BA9GLL7K8683MNBGDOG66PBN/logo-1695017827473.webp"
-                  alt="Peerlist"
-                  width="32"
-                  height="32"
-                />
-                Featured on Peerlist
-              </a>
-
-              <p className="flex items-center gap-2 text-xs sm:text-sm text-muted-foreground">
+              <p className="flex items-center gap-2 text-xs sm:text-sm text-muted-foreground pt-2">
                 <Heart className="h-3 w-3 sm:h-4 sm:w-4 text-red-500" />
                 Crafted with love in India
               </p>

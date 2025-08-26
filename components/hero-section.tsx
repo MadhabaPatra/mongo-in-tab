@@ -18,8 +18,6 @@ import { testMongoConnection } from "@/lib/mongodb";
 import { StorageManager } from "@/lib/storage";
 import { useRouter } from "next/navigation";
 
-import { PeerlistLaunchBadge } from "@/components/peerlist-launch-badge";
-
 export function HeroSection() {
   const router = useRouter();
 
@@ -81,7 +79,6 @@ export function HeroSection() {
     <section className="relative min-h-[90vh] flex items-center justify-center overflow-hidden p-2 sm:p-4 md:p-6">
       <AnimatedBackground />
       <div className="relative z-10 container text-center w-full max-w-6xl mx-auto px-4 sm:px-6 lg:px-8">
-        <PeerlistLaunchBadge />
         <div className="space-y-8 md:space-y-12">
           <h1 className="text-lg sm:text-xl md:text-3xl lg:text-4xl xl:text-5xl font-mono font-bold tracking-tight leading-tight animate-fade-in-scale px-2 sm:px-0">
             <span className="block">Explore and Manage Your MongoDB</span>
