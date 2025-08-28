@@ -76,6 +76,11 @@ export default function RootLayout({
           data-x_margin="18"
           data-y_margin="18"
         ></script>
+        <script
+          async
+          src="https://cdn.seline.com/seline.js"
+          data-token={process.env.SELINE_TOKEN}
+        ></script>
       </body>
     </html>
   );
