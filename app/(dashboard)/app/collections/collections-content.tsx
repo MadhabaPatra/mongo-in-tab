@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { Search, FolderOpen, Database, ChevronDown, FileText } from "lucide-react";
+import { Search, FolderOpen, Database, ChevronDown } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { Card, CardContent, CardHeader } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -39,7 +39,6 @@ export default function CollectionsContent() {
   const [error, setError] = useState<string | null>(null);
   const [searchTerm, setSearchTerm] = useState("");
   const [databaseSearch, setDatabaseSearch] = useState("");
-  const [collectionSearch, setCollectionSearch] = useState("");
 
   const loadDatabases = async () => {
     setIsLoadingDatabases(true);
@@ -137,7 +136,7 @@ export default function CollectionsContent() {
   if (!mounted) {
     return (
       <div className="min-h-screen bg-gray-50">
-        <HeaderSlot><CollectionSelectorSkeleton /></HeaderSlot>
+        <HeaderSlot><DatabaseSelectorSkeleton /></HeaderSlot>
         <div className="max-w-7xl mx-auto py-6 px-4 sm:px-6 lg:px-8">
           <LoadingGrid />
         </div>
@@ -148,7 +147,7 @@ export default function CollectionsContent() {
   if (error) {
     return (
       <div className="min-h-screen bg-gray-50">
-        <HeaderSlot><CollectionSelectorSkeleton /></HeaderSlot>
+        <HeaderSlot><DatabaseSelectorSkeleton /></HeaderSlot>
         <div className="p-4">
           <CollectionErrorState
             errorMessage={error}
@@ -162,14 +161,14 @@ export default function CollectionsContent() {
   return (
     <div className="min-h-screen bg-gray-50">
       <HeaderSlot>
-        {isLoading ? (
-          <CollectionSelectorSkeleton />
+        {isLoadingDatabases ? (
+          <DatabaseSelectorSkeleton />
         ) : (
           <DropdownMenu>
             <DropdownMenuTrigger className="flex items-center gap-1.5 rounded-md px-2 py-1 text-xs font-medium text-foreground bg-muted/30 whitespace-nowrap outline-none cursor-pointer hover:bg-muted/50 transition-colors">
-              <FileText className="h-3.5 w-3.5 text-muted-foreground" />
+              <Database className="h-3.5 w-3.5 text-muted-foreground" />
               <span className="max-w-[140px] truncate">
-                Select collection
+                {currentDatabase || "Select database"}
               </span>
               <ChevronDown className="h-3 w-3 text-muted-foreground" />
             </DropdownMenuTrigger>
@@ -179,9 +178,9 @@ export default function CollectionsContent() {
                 <div className="relative">
                   <Search className="absolute left-2 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-muted-foreground" />
                   <Input
-                    placeholder="Search collections..."
-                    value={collectionSearch}
-                    onChange={(e) => setCollectionSearch(e.target.value)}
+                    placeholder="Search databases..."
+                    value={databaseSearch}
+                    onChange={(e) => setDatabaseSearch(e.target.value)}
                     onKeyDown={(e) => {
                       e.stopPropagation();
                     }}
@@ -190,30 +189,39 @@ export default function CollectionsContent() {
                   />
                 </div>
               </div>
-              {/* Collection list */}
+              {/* Database list */}
               <ScrollArea className="max-h-60">
-                {collections
-                  .filter((c) =>
-                    c.name.toLowerCase().includes(collectionSearch.toLowerCase()),
-                  )
+                {databases
+                  .slice()
                   .sort((a, b) => a.name.localeCompare(b.name))
-                  .map((collection, i) => (
+                  .filter((db) =>
+                    db.name
+                      .toLowerCase()
+                      .includes(databaseSearch.toLowerCase()),
+                  )
+                  .map((db, i) => (
                     <DropdownMenuItem
                       key={i}
                       onClick={() => {
-                        router.push(`/app/documents?connectionId=${connectionId}&database=${currentDatabase}&collectionName=${collection.name}`);
-                        setCollectionSearch("");
+                        setCurrentDatabase(db.name);
+                        setDatabaseSearch("");
                       }}
-                      className="text-xs cursor-pointer"
+                      className={`text-xs cursor-pointer ${
+                        currentDatabase === db.name
+                          ? "bg-muted font-medium"
+                          : ""
+                      }`}
                     >
-                      {collection.name}
+                      {db.name}
                     </DropdownMenuItem>
                   ))}
-                {collections.filter((c) =>
-                  c.name.toLowerCase().includes(collectionSearch.toLowerCase()),
+                {databases.filter((db) =>
+                  db.name
+                    .toLowerCase()
+                    .includes(databaseSearch.toLowerCase()),
                 ).length === 0 && (
                   <div className="px-3 py-2 text-xs text-muted-foreground text-center">
-                    No collections found
+                    No databases found
                   </div>
                 )}
               </ScrollArea>
@@ -268,7 +276,7 @@ export default function CollectionsContent() {
   );
 }
 
-function CollectionSelectorSkeleton() {
+function DatabaseSelectorSkeleton() {
   return (
     <div className="flex items-center gap-1.5 rounded-md px-2 py-1 bg-muted/30">
       <Skeleton className="h-3.5 w-3.5 bg-gray-200 rounded" />

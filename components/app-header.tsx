@@ -90,6 +90,14 @@ export function AppHeader() {
         });
       }
 
+      if (type === "document" && database) {
+        breadcrumbs.push({
+          label: "Collections",
+          href: `/app/collections?connectionId=${connectionId}&database=${database}`,
+          icon: <Table className="h-3.5 w-3.5" />,
+        });
+      }
+
       if (type === "document" && collectionName && !breadcrumbEnd) {
         breadcrumbs.push({
           label: collectionName,
