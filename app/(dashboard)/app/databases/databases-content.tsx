@@ -17,7 +17,6 @@ import { DatabaseEmptyState } from "@/components/database/database-empty-state";
 import { StorageManager } from "@/lib/storage";
 import { useSearchParams } from "next/navigation";
 import { fetchDatabases } from "@/lib/mongodb";
-import { AppHeader } from "@/components/app-header";
 import { useMounted } from "@/lib/hooks/use-mounted";
 
 export default function DatabasesContent() {
@@ -77,7 +76,6 @@ export default function DatabasesContent() {
   if (!mounted) {
     return (
       <div className="min-h-screen bg-gray-50">
-        <AppHeader type={"database"} />
         <div className="max-w-7xl mx-auto py-6 px-4 sm:px-6 lg:px-8">
           <LoadingGrid />
         </div>
@@ -88,7 +86,6 @@ export default function DatabasesContent() {
   if (error) {
     return (
       <div className="min-h-screen bg-gray-50">
-        <AppHeader type="database" />
         <div className="p-4">
           <DatabaseErrorState errorMessage={error} />
         </div>
@@ -98,8 +95,6 @@ export default function DatabasesContent() {
 
   return (
     <div className="min-h-screen bg-gray-50">
-      <AppHeader type="database" />
-
       <div className="max-w-7xl mx-auto py-4 px-4 sm:px-6 lg:px-8">
         {/* Search bar inline above cards */}
         <div className="mb-4">

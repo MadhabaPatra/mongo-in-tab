@@ -30,7 +30,7 @@ import { DocumentErrorState } from "@/components/documents/document-error-state"
 import { useMounted } from "@/lib/hooks/use-mounted";
 import { DocumentsTableView } from "@/components/documents/documents-table-view";
 import { DocumentsEmptyState } from "@/components/documents/documents-empty-state";
-import { AppHeader } from "@/components/app-header";
+import { HeaderSlot } from "@/components/header-slot";
 import { FilterDocuments } from "@/components/documents/filter-documents";
 import { DocumentsCardView } from "@/components/documents/documents-card-view";
 
@@ -184,7 +184,7 @@ export default function DocumentsContent() {
   if (!mounted) {
     return (
       <div className="min-h-screen bg-gray-50">
-        <AppHeader type="document" controls={<CollectionSelectorSkeleton />} />
+        <HeaderSlot><CollectionSelectorSkeleton /></HeaderSlot>
         <div className="max-w-7xl mx-auto py-6 px-4 sm:px-6 lg:px-8">
           <LoadingGrid />
         </div>
@@ -195,7 +195,7 @@ export default function DocumentsContent() {
   if (error) {
     return (
       <div className="min-h-screen bg-gray-50">
-        <AppHeader type="document" controls={<CollectionSelectorSkeleton />} />
+        <HeaderSlot><CollectionSelectorSkeleton /></HeaderSlot>
         <div className="p-4">
           <DocumentErrorState
             errorMessage={error}
@@ -208,79 +208,76 @@ export default function DocumentsContent() {
 
   return (
     <div className="min-h-screen bg-gray-50">
-      <AppHeader
-        type="document"
-        breadcrumbEnd={
-          isLoadingCollections ? (
-            <CollectionSelectorSkeleton />
-          ) : (
-            <DropdownMenu>
-              <DropdownMenuTrigger className="flex items-center gap-1.5 rounded-md px-2 py-1 text-xs font-medium text-foreground bg-muted/30 whitespace-nowrap outline-none cursor-pointer hover:bg-muted/50 transition-colors">
-                <FileText className="h-3.5 w-3.5 text-muted-foreground" />
-                <span className="max-w-[140px] truncate">
-                  {currentCollection || "Select collection"}
-                </span>
-                <ChevronDown className="h-3 w-3 text-muted-foreground" />
-              </DropdownMenuTrigger>
-              <DropdownMenuContent align="start" className="w-60 p-0">
-                {/* Search */}
-                <div className="p-2 border-b border-gray-100">
-                  <div className="relative">
-                    <Search className="absolute left-2 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-muted-foreground" />
-                    <Input
-                      placeholder="Search collections..."
-                      value={collectionSearch}
-                      onChange={(e) => setCollectionSearch(e.target.value)}
-                      onKeyDown={(e) => {
-                        // Stop dropdown typeahead from hijacking keystrokes
-                        e.stopPropagation();
-                      }}
-                      className="pl-7 h-8 text-xs border-gray-200"
-                      autoFocus
-                    />
-                  </div>
+      <HeaderSlot>
+        {isLoadingCollections ? (
+          <CollectionSelectorSkeleton />
+        ) : (
+          <DropdownMenu>
+            <DropdownMenuTrigger className="flex items-center gap-1.5 rounded-md px-2 py-1 text-xs font-medium text-foreground bg-muted/30 whitespace-nowrap outline-none cursor-pointer hover:bg-muted/50 transition-colors">
+              <FileText className="h-3.5 w-3.5 text-muted-foreground" />
+              <span className="max-w-[140px] truncate">
+                {currentCollection || "Select collection"}
+              </span>
+              <ChevronDown className="h-3 w-3 text-muted-foreground" />
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="start" className="w-60 p-0">
+              {/* Search */}
+              <div className="p-2 border-b border-gray-100">
+                <div className="relative">
+                  <Search className="absolute left-2 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-muted-foreground" />
+                  <Input
+                    placeholder="Search collections..."
+                    value={collectionSearch}
+                    onChange={(e) => setCollectionSearch(e.target.value)}
+                    onKeyDown={(e) => {
+                      // Stop dropdown typeahead from hijacking keystrokes
+                      e.stopPropagation();
+                    }}
+                    className="pl-7 h-8 text-xs border-gray-200"
+                    autoFocus
+                  />
                 </div>
-                {/* Collection list */}
-                <ScrollArea className="max-h-60">
-                  {collections
-                    .slice()
-                    .sort((a, b) => a.name.localeCompare(b.name))
-                    .filter((c) =>
-                      c.name
-                        .toLowerCase()
-                        .includes(collectionSearch.toLowerCase()),
-                    )
-                    .map((collection, i) => (
-                      <DropdownMenuItem
-                        key={i}
-                        onClick={() => {
-                          handleCollectionChange(collection.name);
-                          setCollectionSearch("");
-                        }}
-                        className={`text-xs cursor-pointer ${
-                          currentCollection === collection.name
-                            ? "bg-muted font-medium"
-                            : ""
-                        }`}
-                      >
-                        {collection.name}
-                      </DropdownMenuItem>
-                    ))}
-                  {collections.filter((c) =>
+              </div>
+              {/* Collection list */}
+              <ScrollArea className="max-h-60">
+                {collections
+                  .slice()
+                  .sort((a, b) => a.name.localeCompare(b.name))
+                  .filter((c) =>
                     c.name
                       .toLowerCase()
                       .includes(collectionSearch.toLowerCase()),
-                  ).length === 0 && (
-                    <div className="px-3 py-2 text-xs text-muted-foreground text-center">
-                      No collections found
-                    </div>
-                  )}
-                </ScrollArea>
-              </DropdownMenuContent>
-            </DropdownMenu>
-          )
-        }
-      />
+                  )
+                  .map((collection, i) => (
+                    <DropdownMenuItem
+                      key={i}
+                      onClick={() => {
+                        handleCollectionChange(collection.name);
+                        setCollectionSearch("");
+                      }}
+                      className={`text-xs cursor-pointer ${
+                        currentCollection === collection.name
+                          ? "bg-muted font-medium"
+                          : ""
+                      }`}
+                    >
+                      {collection.name}
+                    </DropdownMenuItem>
+                  ))}
+                {collections.filter((c) =>
+                  c.name
+                    .toLowerCase()
+                    .includes(collectionSearch.toLowerCase()),
+                ).length === 0 && (
+                  <div className="px-3 py-2 text-xs text-muted-foreground text-center">
+                    No collections found
+                  </div>
+                )}
+              </ScrollArea>
+            </DropdownMenuContent>
+          </DropdownMenu>
+        )}
+      </HeaderSlot>
 
       <div className="py-2 max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         {currentCollection && !isLoadingCollections && (

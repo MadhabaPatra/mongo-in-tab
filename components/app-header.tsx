@@ -9,8 +9,8 @@ import {
   Table,
   FileText,
 } from "lucide-react";
-import { useEffect, useState, type ReactNode } from "react";
-import { useSearchParams } from "next/navigation";
+import { useEffect, useState } from "react";
+import { usePathname, useSearchParams } from "next/navigation";
 import Image from "next/image";
 
 import { StorageManager } from "@/lib/storage";
@@ -21,6 +21,7 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
+import { useHeaderContext } from "@/lib/header-context";
 
 interface BreadcrumbItem {
   label: string;
@@ -28,13 +29,9 @@ interface BreadcrumbItem {
   icon: React.ReactNode;
 }
 
-interface AppHeaderProps {
-  type: "connection" | "database" | "collection" | "document";
-  controls?: ReactNode;
-  breadcrumbEnd?: ReactNode;
-}
-
-export function AppHeader({ type, controls, breadcrumbEnd }: AppHeaderProps) {
+export function AppHeader() {
+  const { breadcrumbEnd } = useHeaderContext();
+  const pathname = usePathname();
   const searchParams = useSearchParams();
   const connectionId = searchParams.get("connectionId");
   const database = searchParams.get("database");
@@ -54,6 +51,15 @@ export function AppHeader({ type, controls, breadcrumbEnd }: AppHeaderProps) {
       setCurrentConnection(StorageManager.getConnectionDetails(connectionId));
     }
   }, [connectionId]);
+
+  const type: "connection" | "database" | "collection" | "document" =
+    pathname.includes("/documents")
+      ? "document"
+      : pathname.includes("/collections")
+        ? "collection"
+        : pathname.includes("/databases")
+          ? "database"
+          : "connection";
 
   const getBreadcrumbs = (): BreadcrumbItem[] => {
     const breadcrumbs: BreadcrumbItem[] = [
@@ -177,15 +183,6 @@ export function AppHeader({ type, controls, breadcrumbEnd }: AppHeaderProps) {
               </>
             )}
           </div>
-
-          {/* Center — Page Controls (selectors, search, pagination) */}
-          {controls && (
-            <div className="flex-1 flex items-center justify-center min-w-0">
-              <div className="flex items-center gap-3">
-                {controls}
-              </div>
-            </div>
-          )}
 
           {/* Right — Connection Dropdown (hover) */}
           <div className="flex items-center shrink-0">

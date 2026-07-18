@@ -32,7 +32,6 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { toast } from "sonner";
-import { AppHeader } from "@/components/app-header";
 
 export default function AppPage() {
   const [mongoUrl, setMongoUrl] = useState("");
@@ -118,8 +117,6 @@ export default function AppPage() {
 
   return (
     <div className="min-h-screen bg-gray-50">
-      <AppHeader type="connection" />
-
       <div className="max-w-7xl mx-auto py-4 sm:py-6 px-4 sm:px-6 lg:px-8">
         {/* Privacy Alert */}
         <Alert className="border-blue-200 bg-blue-50 mb-4 sm:mb-6">
