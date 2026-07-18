@@ -74,14 +74,6 @@ export function AppHeader() {
     ];
 
     if (connectionId && currentConnection) {
-      if (type === "database") {
-        breadcrumbs.push({
-          label: database || "Databases",
-          href: `/app/databases?connectionId=${connectionId}`,
-          icon: <Database className="h-3.5 w-3.5" />,
-        });
-      }
-
       if (type === "document") {
         breadcrumbs.push({
           label: database || "Databases",
