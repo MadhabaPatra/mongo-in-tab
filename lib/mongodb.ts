@@ -1,6 +1,7 @@
 "use server";
 
 import { MongoClient, ObjectId } from "mongodb";
+import { EJSON } from "bson";
 import { parseAndSanitizeQuery } from "@/lib/query-sanitizer";
 
 /**
@@ -142,31 +143,65 @@ export async function fetchCollections(
 }
 
 /**
- * Serialize BSON/Date to JSON-safe values
+ * Fetch stats for a single collection
  */
-function serializeDocument(doc: any) {
-  return JSON.parse(
-    JSON.stringify(doc, (key, value) => {
-      if (value instanceof Date) return value.toISOString();
-      if (value && value._bsontype) {
-        switch (value._bsontype) {
-          case "ObjectId":
-          case "UUID":
-          case "Decimal128":
-            return value.toString();
-          case "Binary":
-            return value.buffer?.toString("base64");
-          default:
-            return value.toString();
-        }
-      }
-      return value;
-    }),
-  );
+export async function fetchCollectionStats(
+  connectionUrl: string,
+  databaseName: string,
+  collectionName: string,
+): Promise<{
+  success: boolean;
+  data?: {
+    documents: number;
+    avgDocumentSize: number;
+    indexes: number;
+    totalSize: number;
+    storageSize: number;
+    lastModified?: string;
+  };
+  message?: string;
+}> {
+  try {
+    if (!databaseName || !collectionName) {
+      throw new Error("Database name and collection name are required");
+    }
+
+    const client = await getMongoClient(connectionUrl);
+    const database = client.db(databaseName);
+    const collection = database.collection(collectionName);
+
+    const result = await collection
+      .aggregate([{ $collStats: { storageStats: {} } }])
+      .toArray();
+    const stats = result[0]?.storageStats ?? {};
+
+    return {
+      success: true,
+      data: {
+        documents: stats.count ?? 0,
+        avgDocumentSize: stats.avgObjSize ?? 0,
+        indexes: stats.nindexes ?? 0,
+        totalSize: stats.size ?? 0,
+        storageSize: stats.storageSize ?? 0,
+      },
+    };
+  } catch (error: any) {
+    return {
+      success: false,
+      message: error?.message || "Failed to fetch collection stats",
+    };
+  }
 }
 
 /**
- * Fetch documents from a collection with pagination
+ * Serialize BSON to MongoDB Extended JSON (EJSON) preserving type info.
+ */
+function serializeDocument(doc: any) {
+  return EJSON.serialize(doc);
+}
+
+/**
+ * Fetch documents from a collection with pagination and options
  */
 export async function fetchDocuments(
   connectionUrl: string,
@@ -175,6 +210,7 @@ export async function fetchDocuments(
   query_string: string = "",
   page: number = 1,
   limit: number = 20,
+  options?: DocumentQueryOptions,
 ): Promise<{
   success: boolean;
   data?: {
@@ -201,6 +237,18 @@ export async function fetchDocuments(
       query = parseAndSanitizeQuery(query_string);
     }
 
+    // Build find options
+    const findOptions: Record<string, any> = {};
+    if (options?.project && options.project.trim() && options.project !== "{}") {
+      findOptions.projection = parseAndSanitizeQuery(options.project);
+    }
+    if (options?.sort && options.sort.trim() && options.sort !== "{}") {
+      findOptions.sort = parseAndSanitizeQuery(options.sort);
+    }
+    if (options?.maxTimeMS && options.maxTimeMS > 0) {
+      findOptions.maxTimeMS = options.maxTimeMS;
+    }
+
     let totalDocuments = 0;
     try {
       totalDocuments = await collection.countDocuments(query);
@@ -213,28 +261,24 @@ export async function fetchDocuments(
     if (page > totalPages) page = totalPages;
 
     const skip = (page - 1) * limit;
-    const documents = await collection
-      .find(query)
-      .skip(skip)
-      .limit(limit)
-      .toArray();
+    let cursor = collection.find(query, findOptions);
+    cursor = cursor.skip(skip).limit(limit);
+    const documents = await cursor.toArray();
 
-    let fields: string[] = [];
-    try {
-      const fieldAgg = await collection
-        .aggregate([
-          { $sample: { size: 500 } },
-          { $project: { fields: { $objectToArray: "$$ROOT" } } },
-          { $unwind: "$fields" },
-          { $group: { _id: null, allKeys: { $addToSet: "$fields.k" } } },
-        ])
-        .toArray();
-      fields = fieldAgg.length > 0 ? fieldAgg[0].allKeys : [];
-    } catch (err) {
-      console.warn("Could not extract fields:", err);
+    // Extract fields only from the current page's documents
+    const fieldSet = new Set<string>();
+    for (const doc of documents) {
+      for (const key of Object.keys(doc)) {
+        fieldSet.add(key);
+      }
     }
+    const fields = Array.from(fieldSet).sort((a, b) => {
+      if (a === "_id") return -1;
+      if (b === "_id") return 1;
+      return a.localeCompare(b);
+    });
 
-    const serializedDocs = documents.map(serializeDocument);
+    const serializedDocs = documents.map(serializeDocument) as IDocument[];
 
     return {
       success: true,

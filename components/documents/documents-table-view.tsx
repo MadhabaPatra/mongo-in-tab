@@ -9,7 +9,7 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { Button } from "@/components/ui/button";
-import { Copy, Edit, FileText, Hash, X, List, Grid } from "lucide-react";
+import { Copy, Edit, Hash, X } from "lucide-react";
 
 import {
   Tooltip,
@@ -18,11 +18,10 @@ import {
   TooltipTrigger,
 } from "@/components/ui/tooltip";
 
-import { copyToClipboard, getFieldType } from "@/lib/utils";
+import { copyToClipboard, getFieldTypeDisplayName, getEJSONValue } from "@/lib/utils";
 import { toast } from "sonner";
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import EditDocument from "@/components/documents/edit-documents";
-import { DocumentsPagination } from "@/components/documents/documents-pagination";
 
 interface DocumentsTableViewProps {
   connectionId: string;
@@ -30,10 +29,6 @@ interface DocumentsTableViewProps {
   collectionName: string;
   fields: string[];
   documents: IDocument[];
-  pagination: IDocumentPagination;
-  onPaginationChange: (limit: number, pageNo: number) => void;
-  viewMode: "table" | "card";
-  onViewModeChange: (mode: "table" | "card") => void;
   onLoadDocuments: () => void;
 }
 
@@ -43,10 +38,6 @@ export function DocumentsTableView({
   collectionName,
   fields,
   documents,
-  pagination,
-  onPaginationChange,
-  viewMode,
-  onViewModeChange,
   onLoadDocuments,
 }: DocumentsTableViewProps) {
   const [sidebarDocument, setSidebarDocument] = useState<IDocument | null>(
@@ -65,75 +56,70 @@ export function DocumentsTableView({
     setEditDocumentOpen(true);
   };
 
-  const displayAllFieldsExceptID = fields.filter((field) => field !== "_id");
+  // Infer BSON type for each column by scanning visible documents
+  const fieldTypes = useMemo(() => {
+    const types = new Map<string, string>();
+    for (const field of fields) {
+      const seen = new Set<string>();
+      let hasValue = false;
+      for (const doc of documents) {
+        const value = doc[field];
+        if (value !== null && value !== undefined) {
+          hasValue = true;
+          seen.add(getFieldTypeDisplayName(value));
+          if (seen.size > 1) break;
+        }
+      }
+      types.set(field, hasValue ? (seen.size > 1 ? "Mixed" : seen.values().next().value!) : "Null");
+    }
+    return types;
+  }, [documents, fields]);
 
-  const renderCellValue = (value: any, field: string) => {
-    const fieldType = getFieldType(value);
-
+  const renderCellValue = (value: any) => {
     if (value === null || value === undefined) {
       return <span className="text-gray-400 italic text-sm">null</span>;
     }
 
-    if (typeof value === "boolean") {
+    // Extract plain value from EJSON (e.g. { $oid: "..." } → "...")
+    const displayValue = getEJSONValue(value);
+
+    if (typeof displayValue === "boolean") {
       return (
         <span
-          className={`font-medium text-sm ${value ? "text-green-600" : "text-red-600"}`}
+          className={`font-medium text-sm ${displayValue ? "text-green-600" : "text-red-600"}`}
         >
-          {value.toString()}
+          {displayValue.toString()}
         </span>
       );
     }
 
-    if (typeof value === "string") {
-      let displayValue = value;
-
-      // Clean up MongoDB-specific formats
-      switch (fieldType) {
-        case "objectid":
-          displayValue = value.replace("ObjectId('", "").replace("')", "");
-          break;
-        case "int32":
-          displayValue = value.replace("NumberInt(", "").replace(")", "");
-          break;
-        case "int64":
-          displayValue = value.replace("NumberLong(", "").replace(")", "");
-          break;
-        case "double":
-          displayValue = value.replace("NumberDouble(", "").replace(")", "");
-          break;
-        case "decimal128":
-          displayValue = value.replace("NumberDecimal('", "").replace("')", "");
-          break;
-        case "date":
-          displayValue = value.replace("ISODate('", "").replace("')", "");
-          break;
-        case "timestamp":
-          displayValue = value.replace("Timestamp(", "").replace(")", "");
-          break;
-      }
-
+    if (typeof displayValue === "string") {
       const isLongText = displayValue.length > 40;
-      const truncatedValue = isLongText
+      const truncated = isLongText
         ? displayValue.slice(0, 40) + "..."
         : displayValue;
 
       return (
         <span className="font-mono text-sm text-gray-700 block">
-          {truncatedValue}
+          {truncated}
         </span>
       );
     }
 
-    if (Array.isArray(value)) {
+    if (typeof displayValue === "number") {
       return (
-        <span className="text-sm text-gray-600">
-          Array[{value.length}] {value.length > 0 && `(${typeof value[0]}...)`}
-        </span>
+        <span className="font-mono text-sm text-gray-700">{displayValue}</span>
       );
     }
 
-    if (typeof value === "object") {
-      const keys = Object.keys(value);
+    if (Array.isArray(displayValue)) {
+      return (
+        <span className="text-sm text-gray-600">Array[{displayValue.length}]</span>
+      );
+    }
+
+    if (displayValue !== null && typeof displayValue === "object") {
+      const keys = Object.keys(displayValue);
       return (
         <span className="text-sm text-gray-600">
           Object[{keys.length}] {keys.length > 0 && `{${keys[0]}...}`}
@@ -142,55 +128,19 @@ export function DocumentsTableView({
     }
 
     return (
-      <span className="font-mono text-sm text-gray-700">{String(value)}</span>
+      <span className="font-mono text-sm text-gray-700">{String(displayValue)}</span>
     );
   };
 
   return (
     <div className="space-y-4">
-      {/* Header Info */}
-      <div className="flex items-center justify-between py-2">
-        <div className="flex items-center space-x-3">
-          <FileText className="h-5 w-5 text-gray-500" />
-          <div>
-            <p className="text-sm text-gray-500">
-              {documents.length} rows • {fields.length} columns
-            </p>
-          </div>
-        </div>
-        <div className="flex items-center gap-3">
-          <DocumentsPagination
-            pagination={pagination}
-            onPaginationChange={onPaginationChange}
-          />
-          <div className="flex items-center rounded-md border border-gray-300 p-1">
-            <Button
-              variant={viewMode === "table" ? "default" : "ghost"}
-              size="sm"
-              onClick={() => onViewModeChange("table")}
-              className="h-6 px-2 text-xs"
-            >
-              <List className="h-3 w-3" />
-            </Button>
-            <Button
-              variant={viewMode === "card" ? "default" : "ghost"}
-              size="sm"
-              onClick={() => onViewModeChange("card")}
-              className="h-6 px-2 text-xs"
-            >
-              <Grid className="h-3 w-3" />
-            </Button>
-          </div>
-        </div>
-      </div>
-
       {/* Google Sheets-style Table */}
       <div className="border border-gray-100 rounded-sm bg-white shadow-sm overflow-hidden">
         <div className="overflow-auto" style={{ maxHeight: "600px" }}>
           <Table
             className="table-fixed border-collapse"
             style={{
-              minWidth: `${280 + displayAllFieldsExceptID.length * 200}px`,
+              minWidth: `${60 + fields.length * 200}px`,
             }}
           >
             <TableHeader className="bg-gray-50/30 sticky top-0 z-20">
@@ -200,20 +150,16 @@ export function DocumentsTableView({
                   <Hash className="h-3 w-3 mx-auto text-gray-400" />
                 </TableHead>
 
-                {/* Document ID Header */}
-                <TableHead className="w-[220px] font-medium text-gray-700 text-sm sticky left-[60px] bg-white z-40 border-r border-gray-100/60 h-10 px-3">
-                  Document ID
-                </TableHead>
-
                 {/* Field Headers */}
-                {displayAllFieldsExceptID.map((field, index) => (
+                {fields.map((field) => (
                   <TableHead
                     key={field}
-                    className="w-[200px] font-medium text-gray-700 text-sm border-r border-gray-100/60 h-10 px-3"
+                    className="w-[200px] font-medium text-gray-700 text-sm border-r border-gray-100/60 px-3 py-2 align-bottom"
                   >
-                    <div className="flex items-center">
-                      <span className="truncate">
-                        {field.charAt(0).toUpperCase() + field.slice(1)}
+                    <div className="flex flex-col">
+                      <span className="truncate">{field}</span>
+                      <span className="text-[10px] text-gray-400 font-normal tracking-wide">
+                        {fieldTypes.get(field) ?? "Unknown"}
                       </span>
                     </div>
                   </TableHead>
@@ -229,43 +175,20 @@ export function DocumentsTableView({
                   onClick={() => handleOpenJsonSidebar(doc)}
                 >
                   {/* Row Number */}
-                  <TableCell className="text-center sticky left-0  z-30 border-r  border-b border-gray-100/60 h-12 px-2 bg-gray-50 group-hover:bg-blue-50">
+                  <TableCell className="text-center sticky left-0 z-30 border-r border-b border-gray-100/60 h-12 px-2 bg-gray-50 group-hover:bg-blue-50">
                     <span className="text-xs text-gray-500 font-medium">
                       {i + 1}
                     </span>
                   </TableCell>
 
-                  {/* Document ID */}
-                  <TableCell className="sticky left-[60px] z-30 border-r border-b border-gray-100/60 h-12 px-3 bg-gray-50 group-hover:bg-blue-50">
-                    <TooltipProvider>
-                      <Tooltip>
-                        <TooltipTrigger asChild>
-                          <code
-                            className="text-xs font-mono px-2 py-1 rounded text-gray-600 cursor-pointer"
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              copyToClipboard(doc._id);
-                              toast.success("Document ID copied");
-                            }}
-                          >
-                            {doc._id.slice(0, 8)}...{doc._id.slice(-4)}
-                          </code>
-                        </TooltipTrigger>
-                        <TooltipContent>
-                          <p>Click to copy</p>
-                        </TooltipContent>
-                      </Tooltip>
-                    </TooltipProvider>
-                  </TableCell>
-
                   {/* Field Values */}
-                  {displayAllFieldsExceptID.map((field) => (
+                  {fields.map((field) => (
                     <TableCell
                       key={field}
                       className="w-[200px] border-r border-b border-gray-100/60 h-12 px-3"
                     >
                       <div className="truncate">
-                        {renderCellValue(doc[field], field)}
+                        {renderCellValue(doc[field])}
                       </div>
                     </TableCell>
                   ))}
@@ -294,7 +217,7 @@ export function DocumentsTableView({
                   Document JSON
                 </h2>
                 <p className="text-sm text-gray-600 mt-1 font-mono">
-                  ID: {sidebarDocument?._id}
+                  ID: {String(getEJSONValue(sidebarDocument?._id) ?? "")}
                 </p>
               </div>
               <div className="flex items-center space-x-2">

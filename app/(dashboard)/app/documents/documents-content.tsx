@@ -3,15 +3,12 @@
 import { useEffect, useState } from "react";
 import {
   FolderOpen,
-  X,
   FileText,
   Search,
   ChevronDown,
 } from "lucide-react";
 
 import { Card, CardContent } from "@/components/ui/card";
-import { Badge } from "@/components/ui/badge";
-import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Input } from "@/components/ui/input";
 import { ScrollArea } from "@/components/ui/scroll-area";
@@ -31,8 +28,9 @@ import { useMounted } from "@/lib/hooks/use-mounted";
 import { DocumentsTableView } from "@/components/documents/documents-table-view";
 import { DocumentsEmptyState } from "@/components/documents/documents-empty-state";
 import { HeaderSlot } from "@/components/header-slot";
-import { FilterDocuments } from "@/components/documents/filter-documents";
 import { DocumentsCardView } from "@/components/documents/documents-card-view";
+import { DocumentsJsonView } from "@/components/documents/documents-json-view";
+import { DocumentsToolbar } from "@/components/documents/documents-toolbar";
 
 export default function DocumentsContent() {
   const mounted = useMounted();
@@ -58,7 +56,9 @@ export default function DocumentsContent() {
     end: 0,
   });
   const [mongoQuery, setMongoQuery] = useState("{}");
-  const [viewMode, setViewMode] = useState<"table" | "card">("table");
+  const [queryOptions, setQueryOptions] = useState<DocumentQueryOptions>({});
+  const [viewMode, setViewMode] = useState<"table" | "card" | "json">("table");
+  const [limit, setLimit] = useState(25);
 
   useEffect(() => {
     loadCollections();
@@ -69,9 +69,9 @@ export default function DocumentsContent() {
       const params = new URLSearchParams(window.location.search);
       params.set("collectionName", currentCollection);
       router.replace(`?${params.toString()}`);
-      loadDocuments(25, 1);
+      loadDocuments(limit, 1);
     }
-  }, [currentCollection, mongoQuery]);
+  }, [currentCollection, mongoQuery, queryOptions, limit]);
 
   const loadCollections = async () => {
     setIsLoadingCollections(true);
@@ -110,7 +110,7 @@ export default function DocumentsContent() {
     }
   };
 
-  const loadDocuments = async (limit = 25, pageNo = 1) => {
+  const loadDocuments = async (docLimit = limit, pageNo = 1) => {
     if (!connectionId || !database || !currentCollection) return;
 
     setIsLoading(true);
@@ -128,7 +128,8 @@ export default function DocumentsContent() {
         currentCollection,
         mongoQuery === "{}" ? "" : mongoQuery,
         pageNo,
-        limit,
+        docLimit,
+        queryOptions,
       );
 
       if (!response.success) {
@@ -153,18 +154,6 @@ export default function DocumentsContent() {
     } finally {
       setIsLoading(false);
     }
-  };
-
-  const handleClearFilter = () => {
-    setMongoQuery("{}");
-  };
-
-  const handlePaginationChange = (limit: number, pageNo: number) => {
-    loadDocuments(limit, pageNo);
-  };
-
-  const handleFilterApplied = (query: string) => {
-    setMongoQuery(query);
   };
 
   const handleCollectionChange = (collectionName: string) => {
@@ -230,37 +219,28 @@ export default function DocumentsContent() {
         />
       </HeaderSlot>
 
-      <div className="py-2 max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4 space-y-4">
         {currentCollection && !isLoadingCollections && (
-          <>
-            <FilterDocuments
-              fields={fields}
-              onFilterApplied={handleFilterApplied}
-              currentFilter={mongoQuery}
-            />
-            {mongoQuery !== "{}" && mongoQuery.trim() && (
-              <div className="flex items-center justify-between max-w-7xl mx-auto">
-                <div className="flex items-center space-x-3">
-                  <Badge variant="secondary" className="font-mono text-xs">
-                    {mongoQuery}
-                  </Badge>
-                </div>
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  onClick={handleClearFilter}
-                  className="h-7 px-2 text-blue-600 hover:text-blue-800 hover:bg-blue-100"
-                >
-                  <X className="h-3 w-3 mr-1" />
-                  Clear
-                </Button>
-              </div>
-            )}
-          </>
+          <DocumentsToolbar
+            query={mongoQuery}
+            onQueryChange={setMongoQuery}
+            onRunQuery={() => loadDocuments(limit, 1)}
+            options={queryOptions}
+            onOptionsChange={setQueryOptions}
+            pagination={pagination}
+            limit={limit}
+            onLimitChange={(newLimit) => {
+              setLimit(newLimit);
+              loadDocuments(newLimit, 1);
+            }}
+            onPageChange={(page) => loadDocuments(limit, page)}
+            onRefresh={() => loadDocuments(limit, pagination.currentPage)}
+            viewMode={viewMode}
+            onViewModeChange={setViewMode}
+            fields={fields}
+          />
         )}
-      </div>
 
-      <div className="max-w-7xl mx-auto py-4 px-4 sm:px-6 lg:px-8">
         {isLoadingCollections || isLoading ? (
           <LoadingGrid />
         ) : !currentCollection ? (
@@ -274,12 +254,8 @@ export default function DocumentsContent() {
             collectionName={currentCollection}
             documents={documents}
             fields={fields}
-            pagination={pagination}
-            onPaginationChange={handlePaginationChange}
-            viewMode={viewMode}
-            onViewModeChange={setViewMode}
             onLoadDocuments={() => {
-              loadDocuments(25, pagination.currentPage);
+              loadDocuments(limit, pagination.currentPage);
             }}
           />
         ) : viewMode === "card" && connectionId && database ? (
@@ -289,14 +265,12 @@ export default function DocumentsContent() {
             collectionName={currentCollection}
             documents={documents}
             fields={fields}
-            pagination={pagination}
-            onPaginationChange={handlePaginationChange}
-            viewMode={viewMode}
-            onViewModeChange={setViewMode}
             onLoadDocuments={() => {
-              loadDocuments(25, pagination.currentPage);
+              loadDocuments(limit, pagination.currentPage);
             }}
           />
+        ) : viewMode === "json" ? (
+          <DocumentsJsonView documents={documents} />
         ) : (
           <Card>
             <CardContent className="p-6 text-center">
@@ -306,7 +280,6 @@ export default function DocumentsContent() {
             </CardContent>
           </Card>
         )}
-
       </div>
     </div>
   );

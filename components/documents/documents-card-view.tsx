@@ -1,18 +1,17 @@
 "use client";
 
 import { Button } from "@/components/ui/button";
-import { Copy, Edit, FileText, Hash, X, Database, Eye, List, Grid } from "lucide-react";
+import { Copy, Edit, FileText, Hash, X, Database, Eye } from "lucide-react";
 import {
   Tooltip,
   TooltipContent,
   TooltipProvider,
   TooltipTrigger,
 } from "@/components/ui/tooltip";
-import { copyToClipboard, getFieldType } from "@/lib/utils";
+import { copyToClipboard, getFieldType, getEJSONValue } from "@/lib/utils";
 import { toast } from "sonner";
 import { useState } from "react";
 import EditDocument from "@/components/documents/edit-documents";
-import { DocumentsPagination } from "@/components/documents/documents-pagination";
 
 interface DocumentsCardViewProps {
   connectionId: string;
@@ -20,10 +19,6 @@ interface DocumentsCardViewProps {
   collectionName: string;
   fields: string[];
   documents: IDocument[];
-  pagination: IDocumentPagination;
-  onPaginationChange: (limit: number, pageNo: number) => void;
-  viewMode: "table" | "card";
-  onViewModeChange: (mode: "table" | "card") => void;
   onLoadDocuments: () => void;
 }
 
@@ -33,10 +28,6 @@ export function DocumentsCardView({
   collectionName,
   fields,
   documents,
-  pagination,
-  onPaginationChange,
-  viewMode,
-  onViewModeChange,
   onLoadDocuments,
 }: DocumentsCardViewProps) {
   const [sidebarDocument, setSidebarDocument] = useState<IDocument | null>(
@@ -55,8 +46,6 @@ export function DocumentsCardView({
     setEditDocumentOpen(true);
   };
 
-  const displayAllFieldsExceptID = fields.filter((field) => field !== "_id");
-
   const renderCellValue = (value: any, field: string) => {
     const fieldType = getFieldType(value);
 
@@ -64,93 +53,74 @@ export function DocumentsCardView({
       return <span className="text-gray-400 italic text-sm">null</span>;
     }
 
-    if (typeof value === "boolean") {
+    // Extract plain value from EJSON
+    const displayValue = getEJSONValue(value);
+
+    if (typeof displayValue === "boolean") {
       return (
         <span
           className={`font-medium text-sm px-2 py-1 rounded-full ${
-            value ? "bg-green-100 text-green-700" : "bg-red-100 text-red-700"
+            displayValue ? "bg-green-100 text-green-700" : "bg-red-100 text-red-700"
           }`}
         >
-          {value.toString()}
+          {displayValue.toString()}
         </span>
       );
     }
 
-    if (typeof value === "string") {
-      let displayValue = value;
-
-      // Clean up MongoDB-specific formats
-      switch (fieldType) {
-        case "objectid":
-          displayValue = value.replace("ObjectId('", "").replace("')", "");
-          return (
-            <span className="font-mono text-xs bg-blue-50 text-blue-700 px-2 py-1 rounded">
-              {displayValue.length > 20
-                ? `${displayValue.slice(0, 8)}...${displayValue.slice(-8)}`
-                : displayValue}
-            </span>
-          );
-        case "int32":
-          displayValue = value.replace("NumberInt(", "").replace(")", "");
-          break;
-        case "int64":
-          displayValue = value.replace("NumberLong(", "").replace(")", "");
-          break;
-        case "double":
-          displayValue = value.replace("NumberDouble(", "").replace(")", "");
-          break;
-        case "decimal128":
-          displayValue = value.replace("NumberDecimal('", "").replace("')", "");
-          break;
-        case "date":
-          displayValue = value.replace("ISODate('", "").replace("')", "");
-          return (
-            <span className="text-green-600 text-sm">
-              {new Date(displayValue).toLocaleString()}
-            </span>
-          );
-        case "timestamp":
-          displayValue = value.replace("Timestamp(", "").replace(")", "");
-          break;
+    if (typeof displayValue === "string") {
+      if (fieldType === "objectid") {
+        return (
+          <span className="font-mono text-xs bg-blue-50 text-blue-700 px-2 py-1 rounded">
+            {displayValue.length > 20
+              ? `${displayValue.slice(0, 8)}...${displayValue.slice(-8)}`
+              : displayValue}
+          </span>
+        );
+      }
+      if (fieldType === "date") {
+        return (
+          <span className="text-green-600 text-sm">
+            {new Date(displayValue).toLocaleString()}
+          </span>
+        );
       }
 
       const isLongText = displayValue.length > 30;
-      const truncatedValue = isLongText
+      const truncated = isLongText
         ? displayValue.slice(0, 30) + "..."
         : displayValue;
 
-      return <span className="text-sm text-gray-700">{truncatedValue}</span>;
+      return <span className="text-sm text-gray-700">{truncated}</span>;
     }
 
-    if (Array.isArray(value)) {
+    if (typeof displayValue === "number") {
+      return <span className="font-mono text-sm text-gray-700">{displayValue}</span>;
+    }
+
+    if (Array.isArray(displayValue)) {
       return (
         <div className="flex items-center gap-2">
           <span className="text-xs bg-purple-100 text-purple-700 px-2 py-1 rounded">
-            Array[{value.length}]
+            Array[{displayValue.length}]
           </span>
-          {value.length > 0 && (
-            <span className="text-xs text-gray-500">
-              ({typeof value[0]}...)
-            </span>
-          )}
         </div>
       );
     }
 
-    if (typeof value === "object") {
-      const keys = Object.keys(value);
+    if (displayValue !== null && typeof displayValue === "object") {
+      const keys = Object.keys(displayValue);
       return (
         <div className="flex items-center gap-2">
           <span className="text-xs bg-orange-100 text-orange-700 px-2 py-1 rounded">
             Object[{keys.length}]
           </span>
-          {keys.length > 0 && <span className="text-xs text-gray-500"></span>}
         </div>
       );
     }
 
     return (
-      <span className="font-mono text-sm text-gray-700">{String(value)}</span>
+      <span className="font-mono text-sm text-gray-700">{String(displayValue)}</span>
     );
   };
 
@@ -158,7 +128,6 @@ export function DocumentsCardView({
   const getKeyFields = (doc: IDocument) => {
     const keyFields: string[] = [];
 
-    // Common important fields that should be shown first
     const priorityFields = [
       "name",
       "title",
@@ -176,7 +145,7 @@ export function DocumentsCardView({
     }
 
     // If we don't have enough priority fields, add others
-    for (const field of displayAllFieldsExceptID) {
+    for (const field of fields) {
       if (!keyFields.includes(field) && keyFields.length < 3) {
         keyFields.push(field);
       }
@@ -187,42 +156,6 @@ export function DocumentsCardView({
 
   return (
     <div className="space-y-4">
-      {/* Header Info */}
-      <div className="flex items-center justify-between py-2">
-        <div className="flex items-center space-x-3">
-          <Database className="h-5 w-5 text-gray-500" />
-          <div>
-            <p className="text-sm text-gray-500">
-              {documents.length} documents • {fields.length} fields
-            </p>
-          </div>
-        </div>
-        <div className="flex items-center gap-3">
-          <DocumentsPagination
-            pagination={pagination}
-            onPaginationChange={onPaginationChange}
-          />
-          <div className="flex items-center rounded-md border border-gray-300 p-1">
-            <Button
-              variant={viewMode === "table" ? "default" : "ghost"}
-              size="sm"
-              onClick={() => onViewModeChange("table")}
-              className="h-6 px-2 text-xs"
-            >
-              <List className="h-3 w-3" />
-            </Button>
-            <Button
-              variant={viewMode === "card" ? "default" : "ghost"}
-              size="sm"
-              onClick={() => onViewModeChange("card")}
-              className="h-6 px-2 text-xs"
-            >
-              <Grid className="h-3 w-3" />
-            </Button>
-          </div>
-        </div>
-      </div>
-
       {/* Cards Grid */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
         {documents.map((doc, index) => {
@@ -294,11 +227,14 @@ export function DocumentsCardView({
                         className="text-xs font-mono text-gray-600 cursor-pointer hover:text-blue-600 transition-colors mt-1 block"
                         onClick={(e) => {
                           e.stopPropagation();
-                          copyToClipboard(doc._id);
-                          toast.success("Document ID copied");
+                          const id = String(getEJSONValue(doc._id) ?? "");
+                          if (id) {
+                            copyToClipboard(id);
+                            toast.success("Document ID copied");
+                          }
                         }}
                       >
-                        {doc._id.slice(0, 8)}...{doc._id.slice(-4)}
+                        {String(getEJSONValue(doc._id) ?? "").slice(0, 8)}...{String(getEJSONValue(doc._id) ?? "").slice(-4)}
                       </code>
                     </TooltipTrigger>
                     <TooltipContent>
@@ -314,7 +250,7 @@ export function DocumentsCardView({
                 {keyFields.map((field) => (
                   <div key={field} className="space-y-1">
                     <label className="text-xs font-medium text-gray-500 uppercase tracking-wide">
-                      {field.charAt(0).toUpperCase() + field.slice(1)}
+                      {field}
                     </label>
                     <div className="min-h-[20px]">
                       {renderCellValue(doc[field], field)}
@@ -323,11 +259,10 @@ export function DocumentsCardView({
                 ))}
 
                 {/* Additional fields indicator */}
-                {displayAllFieldsExceptID.length > keyFields.length && (
+                {fields.length > keyFields.length && (
                   <div className="pt-2 border-t border-gray-100">
                     <span className="text-xs text-gray-400">
-                      +{displayAllFieldsExceptID.length - keyFields.length} more
-                      fields
+                      +{fields.length - keyFields.length} more fields
                     </span>
                   </div>
                 )}
@@ -366,7 +301,7 @@ export function DocumentsCardView({
                   Document JSON
                 </h2>
                 <p className="text-sm text-gray-600 mt-1 font-mono">
-                  ID: {sidebarDocument?._id}
+                  ID: {String(getEJSONValue(sidebarDocument?._id) ?? "")}
                 </p>
               </div>
               <div className="flex items-center space-x-2">

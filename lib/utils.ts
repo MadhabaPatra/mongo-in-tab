@@ -142,30 +142,98 @@ export function copyToClipboard(text: string) {
 export function getFieldType(value: unknown): string {
   if (value === null) return "null";
   if (value === undefined) return "undefined";
-  if (typeof value === "boolean") return "boolean";
-  if (typeof value === "string") {
-    if (value.startsWith("ObjectId(")) return "objectid";
-    if (value.startsWith("NumberInt(")) return "int32";
-    if (value.startsWith("NumberLong(")) return "int64";
-    if (value.startsWith("NumberDouble(")) return "double";
-    if (value.startsWith("NumberDecimal(")) return "decimal128";
-    if (value.startsWith("ISODate(")) return "date";
-    if (value.startsWith("Timestamp(")) return "timestamp";
-    if (value.startsWith("BinData(")) return "bindata";
-    if (value.startsWith("Code(")) return "code";
-    if (value.startsWith("/") && value.includes("/")) return "regex";
-    if (value.includes("@")) return "string";
-    return "string";
-  }
+
+  const t = typeof value;
+  if (t === "boolean") return "boolean";
+  if (t === "string") return "string";
+  if (t === "number") return "double"; // JS numbers are IEEE 754 doubles
   if (Array.isArray(value)) return "array";
-  if (typeof value === "object") {
-    const obj = value as Record<string, unknown>;
-    if (obj["$ref"] && obj["$id"]) return "dbref";
-    if (obj["$minKey"]) return "minkey";
-    if (obj["$maxKey"]) return "maxkey";
+
+  if (t === "object" && value !== null) {
+    const v = value as Record<string, unknown>;
+    if ("$oid" in v) return "objectid";
+    if ("$numberDecimal" in v) return "decimal128";
+    if ("$date" in v) return "date";
+    if ("$timestamp" in v) return "timestamp";
+    if ("$binary" in v) return "bindata";
+    if ("$code" in v) return "code";
+    if ("$regex" in v) return "regex";
+    if ("$minKey" in v) return "minkey";
+    if ("$maxKey" in v) return "maxkey";
+    if ("$undefined" in v) return "undefined";
+    if ("$dbPointer" in v) return "dbref";
+    if ("$symbol" in v) return "symbol";
+    if ("$ref" in v && "$id" in v) return "dbref";
     return "object";
   }
+
   return "unknown";
+}
+
+/**
+ * Extract a plain display value from an EJSON-serialized value.
+ */
+export function getEJSONValue(value: unknown): unknown {
+  if (value === null || value === undefined) return value;
+  if (typeof value !== "object") return value;
+  if (Array.isArray(value)) return value.map(getEJSONValue);
+
+  const v = value as Record<string, unknown>;
+  if ("$oid" in v) return v.$oid;
+  if ("$numberDecimal" in v) return v.$numberDecimal;
+  if ("$date" in v) return v.$date;
+  if ("$timestamp" in v) return v.$timestamp;
+  if ("$binary" in v) {
+    const bin = v.$binary as Record<string, string>;
+    return bin.base64 ?? "Binary";
+  }
+  if ("$code" in v) return v.$code;
+  if ("$regex" in v) return v.$regex;
+  if ("$minKey" in v) return "MinKey";
+  if ("$maxKey" in v) return "MaxKey";
+  if ("$undefined" in v) return "undefined";
+  if ("$dbPointer" in v) return v.$dbPointer;
+  if ("$symbol" in v) return v.$symbol;
+  if ("$ref" in v && "$id" in v) {
+    const ref = v as Record<string, unknown>;
+    return `${ref.$ref}(${JSON.stringify(getEJSONValue(ref.$id))})`;
+  }
+
+  // Plain object — recursively flatten
+  const result: Record<string, unknown> = {};
+  for (const [key, val] of Object.entries(value)) {
+    result[key] = getEJSONValue(val);
+  }
+  return result;
+}
+
+const BSON_TYPE_DISPLAY_NAMES: Record<string, string> = {
+  objectid: "ObjectId",
+  string: "String",
+  int32: "Int32",
+  int64: "Int64",
+  double: "Double",
+  decimal128: "Decimal128",
+  date: "Date",
+  timestamp: "Timestamp",
+  boolean: "Boolean",
+  array: "Array",
+  object: "Object",
+  null: "Null",
+  undefined: "Undefined",
+  bindata: "Binary",
+  code: "Code",
+  regex: "Regex",
+  minkey: "MinKey",
+  maxkey: "MaxKey",
+  dbref: "DBRef",
+  symbol: "Symbol",
+  unknown: "Unknown",
+};
+
+export function getFieldTypeDisplayName(value: unknown): string {
+  const type = getFieldType(value);
+  return BSON_TYPE_DISPLAY_NAMES[type] || type;
 }
 
 export function getDatabaseLink(

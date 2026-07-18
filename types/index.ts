@@ -17,10 +17,6 @@ interface IDatabase {
 
 interface ICollection {
   name: string;
-  // documents: number;
-  // avgDocumentSize: number;
-  // indexes: number;
-  // lastModified: string;
 }
 
 interface IDocument {
@@ -47,4 +43,18 @@ interface IConnectionState {
     | "connected"
     | "error"
     | "timeout";
+}
+
+interface DocumentQueryOptions {
+  project?: string;
+  sort?: string;
+  skip?: number;
+  maxTimeMS?: number;
+}
+
+interface QueryHistoryItem {
+  id: string;
+  query: string;
+  timestamp: Date;
+  isFavorite?: boolean;
 }
