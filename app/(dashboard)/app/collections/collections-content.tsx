@@ -33,12 +33,11 @@ export default function CollectionsContent() {
 
   const [databases, setDatabases] = useState<IDatabase[]>([]);
   const [isLoadingDatabases, setIsLoadingDatabases] = useState(false);
-  const [currentDatabase, setCurrentDatabase] = useState("");
+  const [currentDatabase, setCurrentDatabase] = useState(database || "");
   const [collections, setCollections] = useState<ICollection[]>([]);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [searchTerm, setSearchTerm] = useState("");
-  const [databaseSearch, setDatabaseSearch] = useState("");
 
   const loadDatabases = async () => {
     setIsLoadingDatabases(true);
@@ -136,7 +135,14 @@ export default function CollectionsContent() {
   if (!mounted) {
     return (
       <div className="min-h-screen bg-gray-50">
-        <HeaderSlot><DatabaseSelectorSkeleton /></HeaderSlot>
+        <HeaderSlot>
+          <DatabaseBreadcrumbDropdown
+            databases={databases}
+            currentDatabase={currentDatabase}
+            onDatabaseChange={setCurrentDatabase}
+            loading={isLoadingDatabases}
+          />
+        </HeaderSlot>
         <div className="max-w-7xl mx-auto py-6 px-4 sm:px-6 lg:px-8">
           <LoadingGrid />
         </div>
@@ -147,7 +153,14 @@ export default function CollectionsContent() {
   if (error) {
     return (
       <div className="min-h-screen bg-gray-50">
-        <HeaderSlot><DatabaseSelectorSkeleton /></HeaderSlot>
+        <HeaderSlot>
+          <DatabaseBreadcrumbDropdown
+            databases={databases}
+            currentDatabase={currentDatabase}
+            onDatabaseChange={setCurrentDatabase}
+            loading={isLoadingDatabases}
+          />
+        </HeaderSlot>
         <div className="p-4">
           <CollectionErrorState
             errorMessage={error}
@@ -161,73 +174,12 @@ export default function CollectionsContent() {
   return (
     <div className="min-h-screen bg-gray-50">
       <HeaderSlot>
-        {isLoadingDatabases ? (
-          <DatabaseSelectorSkeleton />
-        ) : (
-          <DropdownMenu>
-            <DropdownMenuTrigger className="flex items-center gap-1.5 rounded-md px-2 py-1 text-xs font-medium text-foreground bg-muted/30 whitespace-nowrap outline-none cursor-pointer hover:bg-muted/50 transition-colors">
-              <Database className="h-3.5 w-3.5 text-muted-foreground" />
-              <span className="max-w-[140px] truncate">
-                {currentDatabase || "Select database"}
-              </span>
-              <ChevronDown className="h-3 w-3 text-muted-foreground" />
-            </DropdownMenuTrigger>
-            <DropdownMenuContent align="start" className="w-60 p-0">
-              {/* Search */}
-              <div className="p-2 border-b border-gray-100">
-                <div className="relative">
-                  <Search className="absolute left-2 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-muted-foreground" />
-                  <Input
-                    placeholder="Search databases..."
-                    value={databaseSearch}
-                    onChange={(e) => setDatabaseSearch(e.target.value)}
-                    onKeyDown={(e) => {
-                      e.stopPropagation();
-                    }}
-                    className="pl-7 h-8 text-xs border-gray-200"
-                    autoFocus
-                  />
-                </div>
-              </div>
-              {/* Database list */}
-              <ScrollArea className="max-h-60">
-                {databases
-                  .slice()
-                  .sort((a, b) => a.name.localeCompare(b.name))
-                  .filter((db) =>
-                    db.name
-                      .toLowerCase()
-                      .includes(databaseSearch.toLowerCase()),
-                  )
-                  .map((db, i) => (
-                    <DropdownMenuItem
-                      key={i}
-                      onClick={() => {
-                        setCurrentDatabase(db.name);
-                        setDatabaseSearch("");
-                      }}
-                      className={`text-xs cursor-pointer ${
-                        currentDatabase === db.name
-                          ? "bg-muted font-medium"
-                          : ""
-                      }`}
-                    >
-                      {db.name}
-                    </DropdownMenuItem>
-                  ))}
-                {databases.filter((db) =>
-                  db.name
-                    .toLowerCase()
-                    .includes(databaseSearch.toLowerCase()),
-                ).length === 0 && (
-                  <div className="px-3 py-2 text-xs text-muted-foreground text-center">
-                    No databases found
-                  </div>
-                )}
-              </ScrollArea>
-            </DropdownMenuContent>
-          </DropdownMenu>
-        )}
+        <DatabaseBreadcrumbDropdown
+          databases={databases}
+          currentDatabase={currentDatabase}
+          onDatabaseChange={setCurrentDatabase}
+          loading={isLoadingDatabases}
+        />
       </HeaderSlot>
 
       <div className="max-w-7xl mx-auto py-4 px-4 sm:px-6 lg:px-8">
@@ -273,6 +225,86 @@ export default function CollectionsContent() {
         )}
       </div>
     </div>
+  );
+}
+
+function DatabaseBreadcrumbDropdown({
+  databases,
+  currentDatabase,
+  onDatabaseChange,
+  loading,
+}: {
+  databases: IDatabase[];
+  currentDatabase: string;
+  onDatabaseChange: (name: string) => void;
+  loading?: boolean;
+}) {
+  const [search, setSearch] = useState("");
+
+  const filtered = databases
+    .filter((db) => db.name.toLowerCase().includes(search.toLowerCase()))
+    .sort((a, b) => a.name.localeCompare(b.name));
+
+  return (
+    <DropdownMenu>
+      <DropdownMenuTrigger className="flex items-center gap-1.5 rounded-md px-2 py-1 text-xs font-medium text-foreground bg-muted/30 whitespace-nowrap outline-none cursor-pointer hover:bg-muted/50 transition-colors">
+        <Database className="h-3.5 w-3.5 text-muted-foreground" />
+        <span className="max-w-[140px] truncate">
+          {currentDatabase || "Select database"}
+        </span>
+        <ChevronDown className="h-3 w-3 text-muted-foreground" />
+      </DropdownMenuTrigger>
+      <DropdownMenuContent align="start" className="w-60 p-0">
+        {/* Search */}
+        <div className="p-2 border-b border-gray-100">
+          <div className="relative">
+            <Search className="absolute left-2 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-muted-foreground" />
+            <Input
+              placeholder="Search databases..."
+              value={search}
+              onChange={(e) => setSearch(e.target.value)}
+              onKeyDown={(e) => {
+                e.stopPropagation();
+              }}
+              className="pl-7 h-8 text-xs border-gray-200"
+              autoFocus
+            />
+          </div>
+        </div>
+        {/* Database list */}
+        <ScrollArea className="max-h-60">
+          {loading ? (
+            <div className="p-2 space-y-2">
+              {[...Array(5)].map((_, i) => (
+                <Skeleton key={i} className="h-6 w-full bg-gray-100 rounded" />
+              ))}
+            </div>
+          ) : (
+            <>
+              {filtered.map((db, i) => (
+                <DropdownMenuItem
+                  key={i}
+                  onClick={() => {
+                    onDatabaseChange(db.name);
+                    setSearch("");
+                  }}
+                  className={`text-xs cursor-pointer ${
+                    currentDatabase === db.name ? "bg-muted font-medium" : ""
+                  }`}
+                >
+                  {db.name}
+                </DropdownMenuItem>
+              ))}
+              {filtered.length === 0 && (
+                <div className="px-3 py-2 text-xs text-muted-foreground text-center">
+                  No databases found
+                </div>
+              )}
+            </>
+          )}
+        </ScrollArea>
+      </DropdownMenuContent>
+    </DropdownMenu>
   );
 }
 

@@ -6,7 +6,6 @@ import {
   LogOut,
   Server,
   Database,
-  Table,
   FileText,
 } from "lucide-react";
 import { useEffect, useState } from "react";
@@ -74,33 +73,25 @@ export function AppHeader() {
     ];
 
     if (connectionId && currentConnection) {
-      if (type === "document") {
-        breadcrumbs.push({
-          label: database || "Databases",
-          href: `/app/collections?connectionId=${connectionId}&database=${database}`,
-          icon: <Database className="h-3.5 w-3.5" />,
-        });
-      }
-
+      // Collections page: Connection > [DatabaseDropdown]
+      // Add database as last breadcrumb item (replaced by breadcrumbEnd dropdown)
       if (type === "collection" && database) {
         breadcrumbs.push({
           label: database,
-          href: `/app/databases?connectionId=${connectionId}`,
+          href: "#",
           icon: <Database className="h-3.5 w-3.5" />,
         });
       }
 
+      // Documents page: Connection > DatabaseName > [CollectionDropdown]
       if (type === "document" && database) {
         breadcrumbs.push({
-          label: "Collections",
+          label: database,
           href: `/app/collections?connectionId=${connectionId}&database=${database}`,
-          icon: <Table className="h-3.5 w-3.5" />,
+          icon: <Database className="h-3.5 w-3.5" />,
         });
-      }
-
-      if (type === "document" && collectionName && !breadcrumbEnd) {
         breadcrumbs.push({
-          label: collectionName,
+          label: collectionName || "Select collection",
           href: "#",
           icon: <FileText className="h-3.5 w-3.5" />,
         });
