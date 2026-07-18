@@ -133,7 +133,7 @@ export function AppHeader() {
             </Link>
 
             {/* Breadcrumbs */}
-            {breadcrumbs.length > 1 && (
+            {(breadcrumbs.length > 1 || (connectionId && currentConnection)) && (
               <>
                 <div className="hidden sm:block h-5 w-px bg-border/60 shrink-0" />
                 <nav
