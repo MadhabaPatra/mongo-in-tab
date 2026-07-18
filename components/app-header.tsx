@@ -13,6 +13,7 @@ import { usePathname, useSearchParams } from "next/navigation";
 import Image from "next/image";
 
 import { StorageManager } from "@/lib/storage";
+import { maskMongoUrl } from "@/lib/utils";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -168,56 +169,52 @@ export function AppHeader() {
           </div>
 
           {/* Right — Connection Dropdown (hover) */}
-          <div className="flex items-center shrink-0">
-            <DropdownMenu open={isDropdownOpen} onOpenChange={setIsDropdownOpen}>
-              <DropdownMenuTrigger
-                className="flex items-center gap-1.5 rounded-md bg-muted/30 px-2.5 py-1.5 text-xs font-medium text-muted-foreground hover:text-foreground hover:bg-muted/50 transition-colors outline-none cursor-default"
-                onMouseEnter={() => setIsDropdownOpen(true)}
-              >
-                <div className="relative">
-                  <Server className="h-3.5 w-3.5 text-primary" />
-                  {currentConnection && (
-                    <div className="absolute -bottom-0.5 -right-0.5 h-1.5 w-1.5 rounded-full bg-green-500 border border-background" />
-                  )}
-                </div>
-                <span className="hidden sm:inline max-w-[120px] truncate font-mono">
-                  {currentConnection?.name || "Not connected"}
-                </span>
-              </DropdownMenuTrigger>
-              <DropdownMenuContent
-                align="end"
-                className="w-56"
-                onMouseLeave={() => setIsDropdownOpen(false)}
-              >
-                {currentConnection ? (
-                  <>
-                    <div className="px-3 py-2">
-                      <p className="text-xs font-medium text-foreground">
-                        {currentConnection.name}
-                      </p>
-                      <p className="text-[10px] text-muted-foreground mt-0.5 truncate font-mono">
-                        {currentConnection.url}
-                      </p>
-                    </div>
-                    <DropdownMenuSeparator />
-                  </>
-                ) : null}
-                <DropdownMenuItem
-                  onClick={handleRefresh}
-                  className="text-xs cursor-pointer"
+          {currentConnection && (
+            <div className="flex items-center shrink-0">
+              <DropdownMenu open={isDropdownOpen} onOpenChange={setIsDropdownOpen}>
+                <DropdownMenuTrigger
+                  className="flex items-center gap-1.5 rounded-md bg-muted/30 px-2.5 py-1.5 text-xs font-medium text-muted-foreground hover:text-foreground hover:bg-muted/50 transition-colors outline-none cursor-default"
+                  onMouseEnter={() => setIsDropdownOpen(true)}
                 >
-                  <RefreshCw className="h-3.5 w-3.5 mr-2" />
-                  Refresh page
-                </DropdownMenuItem>
-                <DropdownMenuItem asChild className="text-xs cursor-pointer">
-                  <Link href="/app">
-                    <LogOut className="h-3.5 w-3.5 mr-2" />
-                    Disconnect
-                  </Link>
-                </DropdownMenuItem>
-              </DropdownMenuContent>
-            </DropdownMenu>
-          </div>
+                  <div className="relative">
+                    <Server className="h-3.5 w-3.5 text-primary" />
+                    <div className="absolute -bottom-0.5 -right-0.5 h-1.5 w-1.5 rounded-full bg-green-500 border border-background" />
+                  </div>
+                  <span className="hidden sm:inline max-w-[120px] truncate font-mono">
+                    {currentConnection.name}
+                  </span>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent
+                  align="end"
+                  className="w-56"
+                  onMouseLeave={() => setIsDropdownOpen(false)}
+                >
+                  <div className="px-3 py-2">
+                    <p className="text-xs font-medium text-foreground">
+                      {currentConnection.name}
+                    </p>
+                    <p className="text-[10px] text-muted-foreground mt-0.5 truncate font-mono">
+                      {maskMongoUrl(currentConnection.url)}
+                    </p>
+                  </div>
+                  <DropdownMenuSeparator />
+                  <DropdownMenuItem
+                    onClick={handleRefresh}
+                    className="text-xs cursor-pointer"
+                  >
+                    <RefreshCw className="h-3.5 w-3.5 mr-2" />
+                    Refresh page
+                  </DropdownMenuItem>
+                  <DropdownMenuItem asChild className="text-xs cursor-pointer">
+                    <Link href="/app">
+                      <LogOut className="h-3.5 w-3.5 mr-2" />
+                      Disconnect
+                    </Link>
+                  </DropdownMenuItem>
+                </DropdownMenuContent>
+              </DropdownMenu>
+            </div>
+          )}
         </div>
       </div>
     </header>

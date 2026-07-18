@@ -3,6 +3,8 @@ interface IConnection {
   url: string;
   name?: string;
   lastUsed?: Date;
+  color?: string;
+  isFavorite?: boolean;
 }
 
 interface IDatabase {

@@ -8,7 +8,12 @@ const STORAGE_KEYS = {
 };
 
 export class StorageManager {
-  static addConnection(url: string, name?: string): string {
+  static addConnection(
+    url: string,
+    name?: string,
+    color?: string,
+    isFavorite?: boolean,
+  ): string {
     try {
       const connections = this.getConnections();
       const index = connections.findIndex((conn) => conn.url === url);
@@ -18,6 +23,8 @@ export class StorageManager {
         url: url,
         name: name || this.extractNameFromUrl(url),
         lastUsed: new Date(),
+        color,
+        isFavorite,
       };
 
       if (index >= 0) {
@@ -34,8 +41,8 @@ export class StorageManager {
       );
 
       return connection.id;
-    } catch (error) {
-      throw error;
+    } catch {
+      throw new Error("Failed to add connection");
     }
   }
 
@@ -72,8 +79,8 @@ export class StorageManager {
       );
 
       return connection.id;
-    } catch (error) {
-      throw error;
+    } catch {
+      throw new Error("Failed to load sample connection");
     }
   }
 
@@ -106,7 +113,7 @@ export class StorageManager {
       const filtered = connections.filter((conn) => conn.id !== connectionId);
       localStorage.setItem(STORAGE_KEYS.CONNECTIONS, JSON.stringify(filtered));
       return true;
-    } catch (error) {
+    } catch {
       return false;
     }
   }
@@ -115,7 +122,58 @@ export class StorageManager {
     try {
       localStorage.setItem(STORAGE_KEYS.CONNECTIONS, JSON.stringify([]));
       return true;
-    } catch (error) {
+    } catch {
+      return false;
+    }
+  }
+
+  static updateConnectionName(connectionId: string, name: string): boolean {
+    try {
+      const connections = this.getConnections();
+      const index = connections.findIndex((conn) => conn.id === connectionId);
+      if (index === -1) return false;
+      connections[index] = { ...connections[index], name };
+      localStorage.setItem(
+        STORAGE_KEYS.CONNECTIONS,
+        JSON.stringify(connections),
+      );
+      return true;
+    } catch {
+      return false;
+    }
+  }
+
+  static updateConnectionColor(connectionId: string, color: string): boolean {
+    try {
+      const connections = this.getConnections();
+      const index = connections.findIndex((conn) => conn.id === connectionId);
+      if (index === -1) return false;
+      connections[index] = { ...connections[index], color };
+      localStorage.setItem(
+        STORAGE_KEYS.CONNECTIONS,
+        JSON.stringify(connections),
+      );
+      return true;
+    } catch {
+      return false;
+    }
+  }
+
+  static updateConnectionFavorite(
+    connectionId: string,
+    isFavorite: boolean,
+  ): boolean {
+    try {
+      const connections = this.getConnections();
+      const index = connections.findIndex((conn) => conn.id === connectionId);
+      if (index === -1) return false;
+      connections[index] = { ...connections[index], isFavorite };
+      localStorage.setItem(
+        STORAGE_KEYS.CONNECTIONS,
+        JSON.stringify(connections),
+      );
+      return true;
+    } catch {
       return false;
     }
   }

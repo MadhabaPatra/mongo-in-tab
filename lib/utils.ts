@@ -130,7 +130,7 @@ export function formatTimestamp(timestamp: Date) {
     if (minutes < 60) return `${minutes}m ago`;
     if (hours < 24) return `${hours}h ago`;
     return `${days}d ago`;
-  } catch (e) {
+  } catch {
     return "Invalid Date";
   }
 }
@@ -139,7 +139,7 @@ export function copyToClipboard(text: string) {
   navigator.clipboard.writeText(text);
 }
 
-export function getFieldType(value: any): string {
+export function getFieldType(value: unknown): string {
   if (value === null) return "null";
   if (value === undefined) return "undefined";
   if (typeof value === "boolean") return "boolean";
@@ -159,9 +159,10 @@ export function getFieldType(value: any): string {
   }
   if (Array.isArray(value)) return "array";
   if (typeof value === "object") {
-    if (value["$ref"] && value["$id"]) return "dbref";
-    if (value["$minKey"]) return "minkey";
-    if (value["$maxKey"]) return "maxkey";
+    const obj = value as Record<string, unknown>;
+    if (obj["$ref"] && obj["$id"]) return "dbref";
+    if (obj["$minKey"]) return "minkey";
+    if (obj["$maxKey"]) return "maxkey";
     return "object";
   }
   return "unknown";
@@ -175,4 +176,18 @@ export function getDatabaseLink(
     return `/app/collections?connectionId=${connectionId}&database=${database}`;
   }
   return "#";
+}
+
+/**
+ * Masks credentials in a MongoDB connection string.
+ * mongodb://user:pass@host:27017/db → mongodb://****@host:27017/db
+ */
+export function maskMongoUrl(url: string): string {
+  if (!url) return "";
+  try {
+    // Mask credentials between :// and @
+    return url.replace(/^(mongodb(?:\+srv)?:\/\/)[^@]+@/, "$1****@");
+  } catch {
+    return url;
+  }
 }
