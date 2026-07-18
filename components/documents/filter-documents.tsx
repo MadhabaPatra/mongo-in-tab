@@ -12,6 +12,7 @@ import { useState } from "react";
 import { Filter, X, Search } from "lucide-react";
 import { Textarea } from "@/components/ui/textarea";
 import { Input } from "@/components/ui/input";
+import { validateQueryString } from "@/lib/utils";
 
 interface FilterDocumentsProps {
   fields: string[];
@@ -36,12 +37,8 @@ export function FilterDocuments({
 
   // Validate JSON query
   const validateQuery = (queryString: string) => {
-    try {
-      JSON.parse(queryString);
-      setIsValidQuery(true);
-    } catch {
-      setIsValidQuery(false);
-    }
+    const error = validateQueryString(queryString);
+    setIsValidQuery(!error);
   };
 
   const handleQueryChange = (value: string) => {

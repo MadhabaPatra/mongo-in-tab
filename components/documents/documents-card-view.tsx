@@ -1,7 +1,7 @@
 "use client";
 
 import { Button } from "@/components/ui/button";
-import { Copy, Edit, FileText, Hash, X, Database, Eye } from "lucide-react";
+import { Copy, Edit, FileText, Hash, X, Database, Eye, List, Grid } from "lucide-react";
 import {
   Tooltip,
   TooltipContent,
@@ -12,6 +12,7 @@ import { copyToClipboard, getFieldType } from "@/lib/utils";
 import { toast } from "sonner";
 import { useState } from "react";
 import EditDocument from "@/components/documents/edit-documents";
+import { DocumentsPagination } from "@/components/documents/documents-pagination";
 
 interface DocumentsCardViewProps {
   connectionId: string;
@@ -19,6 +20,10 @@ interface DocumentsCardViewProps {
   collectionName: string;
   fields: string[];
   documents: IDocument[];
+  pagination: IDocumentPagination;
+  onPaginationChange: (limit: number, pageNo: number) => void;
+  viewMode: "table" | "card";
+  onViewModeChange: (mode: "table" | "card") => void;
   onLoadDocuments: () => void;
 }
 
@@ -28,6 +33,10 @@ export function DocumentsCardView({
   collectionName,
   fields,
   documents,
+  pagination,
+  onPaginationChange,
+  viewMode,
+  onViewModeChange,
   onLoadDocuments,
 }: DocumentsCardViewProps) {
   const [sidebarDocument, setSidebarDocument] = useState<IDocument | null>(
@@ -186,6 +195,30 @@ export function DocumentsCardView({
             <p className="text-sm text-gray-500">
               {documents.length} documents • {fields.length} fields
             </p>
+          </div>
+        </div>
+        <div className="flex items-center gap-3">
+          <DocumentsPagination
+            pagination={pagination}
+            onPaginationChange={onPaginationChange}
+          />
+          <div className="flex items-center rounded-md border border-gray-300 p-1">
+            <Button
+              variant={viewMode === "table" ? "default" : "ghost"}
+              size="sm"
+              onClick={() => onViewModeChange("table")}
+              className="h-6 px-2 text-xs"
+            >
+              <List className="h-3 w-3" />
+            </Button>
+            <Button
+              variant={viewMode === "card" ? "default" : "ghost"}
+              size="sm"
+              onClick={() => onViewModeChange("card")}
+              className="h-6 px-2 text-xs"
+            >
+              <Grid className="h-3 w-3" />
+            </Button>
           </div>
         </div>
       </div>

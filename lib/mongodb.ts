@@ -1,6 +1,7 @@
 "use server";
 
 import { MongoClient, ObjectId } from "mongodb";
+import { parseAndSanitizeQuery } from "@/lib/query-sanitizer";
 
 /**
  * Cached MongoDB client wrapper
@@ -195,8 +196,10 @@ export async function fetchDocuments(
     const database = client.db(databaseName);
     const collection = database.collection(collectionName);
 
-    let query: Record<string, any> =
-      query_string && query_string !== "{}" ? JSON.parse(query_string) : {};
+    let query: Record<string, any> = {};
+    if (query_string && query_string !== "{}") {
+      query = parseAndSanitizeQuery(query_string);
+    }
 
     let totalDocuments = 0;
     try {

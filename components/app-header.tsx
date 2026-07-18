@@ -1,25 +1,26 @@
 "use client";
-import { Button } from "@/components/ui/button";
+
 import Link from "next/link";
 import {
-  ArrowLeft,
-  Info,
-  LogOut,
   RefreshCw,
+  LogOut,
   Server,
   Database,
   Table,
   FileText,
 } from "lucide-react";
-import { useEffect, useState } from "react";
-import {
-  Tooltip,
-  TooltipContent,
-  TooltipTrigger,
-} from "@/components/ui/tooltip";
+import { useEffect, useState, type ReactNode } from "react";
 import { useSearchParams } from "next/navigation";
-import { StorageManager } from "@/lib/storage";
 import Image from "next/image";
+
+import { StorageManager } from "@/lib/storage";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 
 interface BreadcrumbItem {
   label: string;
@@ -27,7 +28,13 @@ interface BreadcrumbItem {
   icon: React.ReactNode;
 }
 
-export function AppHeader({ type }: { type: string }) {
+interface AppHeaderProps {
+  type: "connection" | "database" | "collection" | "document";
+  controls?: ReactNode;
+  breadcrumbEnd?: ReactNode;
+}
+
+export function AppHeader({ type, controls, breadcrumbEnd }: AppHeaderProps) {
   const searchParams = useSearchParams();
   const connectionId = searchParams.get("connectionId");
   const database = searchParams.get("database");
@@ -36,6 +43,7 @@ export function AppHeader({ type }: { type: string }) {
   const [currentConnection, setCurrentConnection] = useState<
     IConnection | undefined
   >(undefined);
+  const [isDropdownOpen, setIsDropdownOpen] = useState(false);
 
   const handleRefresh = () => {
     window.location.reload();
@@ -47,26 +55,44 @@ export function AppHeader({ type }: { type: string }) {
     }
   }, [connectionId]);
 
-  // Generate breadcrumbs based on current page type
   const getBreadcrumbs = (): BreadcrumbItem[] => {
     const breadcrumbs: BreadcrumbItem[] = [
       {
-        label: "Connections",
-        href: "/app",
+        label: currentConnection?.name || "Connections",
+        href:
+          connectionId && currentConnection
+            ? `/app/databases?connectionId=${connectionId}`
+            : "/app",
         icon: <Server className="h-3.5 w-3.5" />,
       },
     ];
 
     if (connectionId && currentConnection) {
-      if (type === "database" || type === "collection" || type === "document") {
+      if (type === "database") {
         breadcrumbs.push({
-          label: "Databases",
+          label: database || "Databases",
           href: `/app/databases?connectionId=${connectionId}`,
           icon: <Database className="h-3.5 w-3.5" />,
         });
       }
 
-      if ((type === "collection" || type === "document") && database) {
+      if (type === "document") {
+        breadcrumbs.push({
+          label: database || "Databases",
+          href: `/app/collections?connectionId=${connectionId}&database=${database}`,
+          icon: <Database className="h-3.5 w-3.5" />,
+        });
+      }
+
+      if (type === "collection" && database) {
+        breadcrumbs.push({
+          label: database,
+          href: `/app/databases?connectionId=${connectionId}`,
+          icon: <Database className="h-3.5 w-3.5" />,
+        });
+      }
+
+      if (type === "document" && database) {
         breadcrumbs.push({
           label: "Collections",
           href: `/app/collections?connectionId=${connectionId}&database=${database}`,
@@ -74,9 +100,9 @@ export function AppHeader({ type }: { type: string }) {
         });
       }
 
-      if (type === "document" && collectionName) {
+      if (type === "document" && collectionName && !breadcrumbEnd) {
         breadcrumbs.push({
-          label: "Documents",
+          label: collectionName,
           href: "#",
           icon: <FileText className="h-3.5 w-3.5" />,
         });
@@ -91,41 +117,39 @@ export function AppHeader({ type }: { type: string }) {
   return (
     <header className="sticky top-0 z-50 border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
       <div className="mx-auto px-4 sm:px-6">
-        <div className="flex h-16 items-center justify-between">
-          {/* Left Section - Logo and Navigation */}
-          <div className="flex items-center space-x-4">
+        <div className="flex h-14 items-center justify-between gap-4">
+          {/* Left — Logo + Breadcrumbs */}
+          <div className="flex items-center gap-3 min-w-0">
             {/* Logo */}
-            <Link href="/" className="flex items-center space-x-2 group">
-              <div className="relative">
-                <Image
-                  src="/logo.png"
-                  width={32}
-                  height={32}
-                  alt="MongoInTab Logo"
-                  className="transition-transform group-hover:scale-105"
-                />
-              </div>
-              <span className="font-mono text-lg font-semibold bg-gradient-to-r from-primary to-primary/80 bg-clip-text text-transparent">
+            <Link href="/" className="flex items-center gap-2 shrink-0 group">
+              <Image
+                src="/logo.png"
+                width={28}
+                height={28}
+                alt="MongoInTab Logo"
+                className="transition-transform group-hover:scale-105"
+              />
+              <span className="font-mono text-base font-semibold bg-gradient-to-r from-primary to-primary/80 bg-clip-text text-transparent hidden sm:inline">
                 MongoInTab
               </span>
             </Link>
 
-            {/* Breadcrumb Navigation */}
+            {/* Breadcrumbs */}
             {breadcrumbs.length > 1 && (
               <>
-                <div className="hidden sm:block h-6 w-px bg-border/60" />
+                <div className="hidden sm:block h-5 w-px bg-border/60 shrink-0" />
                 <nav
-                  className="hidden sm:flex items-center space-x-1"
+                  className="hidden sm:flex items-center gap-1 min-w-0"
                   aria-label="Breadcrumb"
                 >
                   {breadcrumbs.map((item, index) => (
-                    <div key={item.href} className="flex items-center">
+                    <div key={item.href} className="flex items-center shrink-0">
                       {index > 0 && (
-                        <div className="mx-2 h-4 w-4 text-muted-foreground/50">
+                        <div className="mx-1 h-3.5 w-3.5 text-muted-foreground/40 shrink-0">
                           <svg
                             viewBox="0 0 16 16"
                             fill="currentColor"
-                            className="h-4 w-4"
+                            className="h-3.5 w-3.5"
                           >
                             <path d="M6.22 3.22a.75.75 0 0 1 1.06 0l4.25 4.25a.75.75 0 0 1 0 1.06L7.28 12.78a.75.75 0 0 1-1.06-1.06L9.94 8 6.22 4.28a.75.75 0 0 1 0-1.06Z" />
                           </svg>
@@ -134,13 +158,15 @@ export function AppHeader({ type }: { type: string }) {
                       {index < breadcrumbs.length - 1 ? (
                         <Link
                           href={item.href}
-                          className="flex items-center space-x-1.5 rounded-md px-2 py-1 text-sm font-medium text-muted-foreground hover:text-foreground hover:bg-muted/50 transition-colors"
+                          className="flex items-center gap-1.5 rounded-md px-2 py-1 text-xs font-medium text-muted-foreground hover:text-foreground hover:bg-muted/50 transition-colors whitespace-nowrap"
                         >
                           {item.icon}
                           <span>{item.label}</span>
                         </Link>
+                      ) : breadcrumbEnd ? (
+                        <div className="flex items-center">{breadcrumbEnd}</div>
                       ) : (
-                        <div className="flex items-center space-x-1.5 rounded-md px-2 py-1 text-sm font-medium text-foreground bg-muted/30">
+                        <div className="flex items-center gap-1.5 rounded-md px-2 py-1 text-xs font-medium text-foreground bg-muted/30 whitespace-nowrap">
                           {item.icon}
                           <span>{item.label}</span>
                         </div>
@@ -152,105 +178,67 @@ export function AppHeader({ type }: { type: string }) {
             )}
           </div>
 
-          {/* Right Section - Connection Info and Actions */}
-          <div className="flex items-center space-x-3">
-            {/* Connection Info - Desktop */}
-            {currentConnection && (
-              <div className="hidden md:flex items-center space-x-3 rounded-md bg-muted/30 px-3 py-1.5 mr-2">
-                <div className="relative">
-                  <Server className="h-4 w-4 text-primary" />
-                  <div className="absolute -bottom-0.5 -right-0.5 h-2 w-2 rounded-full bg-green-500 border border-background" />
-                </div>
-                <div className="flex items-center space-x-2 text-sm">
-                  <span className="font-mono font-medium text-foreground max-w-[120px] truncate">
-                    {currentConnection.name}
-                  </span>
-                  <Tooltip>
-                    <TooltipTrigger asChild>
-                      <div className="flex items-center space-x-1 text-xs text-muted-foreground hover:text-foreground transition-colors">
-                        <span>#{currentConnection.id}</span>
-                        <Info className="h-3 w-3" />
-                      </div>
-                    </TooltipTrigger>
-                    <TooltipContent side="bottom" className="max-w-xs">
-                      <div className="text-center space-y-1">
-                        <p className="text-xs">
-                          All data runs in your browser — nothing stored on
-                          servers.
-                        </p>
-                      </div>
-                    </TooltipContent>
-                  </Tooltip>
-                </div>
-              </div>
-            )}
-
-            {/* Action Buttons */}
-            {breadcrumbs.length > 1 && (
-              <Button variant="ghost" size="sm" asChild className="sm:hidden">
-                <Link href={breadcrumbs[breadcrumbs.length - 2].href}>
-                  <ArrowLeft className="h-4 w-4" />
-                </Link>
-              </Button>
-            )}
-
-            {/* Action Buttons */}
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={handleRefresh}
-              className="hover:bg-primary/5 hover:border-primary/20"
-            >
-              <RefreshCw className="h-4 w-4 sm:mr-2" />
-              <span className="hidden sm:inline">Refresh</span>
-            </Button>
-
-            <Button
-              variant="outline"
-              size="sm"
-              asChild
-              className="hover:bg-destructive/5 hover:border-destructive/20 hover:text-destructive"
-            >
-              <Link href="/app">
-                <LogOut className="h-4 w-4 sm:mr-2" />
-                <span className="hidden sm:inline">Disconnect</span>
-              </Link>
-            </Button>
-          </div>
-        </div>
-
-        {/* Mobile Connection Info */}
-        {currentConnection && (
-          <div className="lg:hidden border-t bg-muted/20 px-4 py-3">
-            <div className="flex items-center space-x-3">
-              <div className="relative">
-                <Server className="h-4 w-4 text-primary" />
-                <div className="absolute -bottom-0.5 -right-0.5 h-2 w-2 rounded-full bg-green-500 border border-background" />
-              </div>
-              <div className="flex items-center space-x-3 min-w-0 flex-1">
-                <span className="font-mono font-medium text-sm text-foreground truncate">
-                  {currentConnection.name}
-                </span>
-                <div className="flex items-center space-x-1 text-xs text-muted-foreground">
-                  <span>#{currentConnection.id}</span>
-                  <Tooltip>
-                    <TooltipTrigger asChild>
-                      <Info className="h-3 w-3 hover:text-foreground transition-colors" />
-                    </TooltipTrigger>
-                    <TooltipContent side="top" className="max-w-xs">
-                      <div className="text-center space-y-1">
-                        <p className="text-xs">
-                          All data runs in your browser — nothing stored on
-                          servers.
-                        </p>
-                      </div>
-                    </TooltipContent>
-                  </Tooltip>
-                </div>
+          {/* Center — Page Controls (selectors, search, pagination) */}
+          {controls && (
+            <div className="flex-1 flex items-center justify-center min-w-0">
+              <div className="flex items-center gap-3">
+                {controls}
               </div>
             </div>
+          )}
+
+          {/* Right — Connection Dropdown (hover) */}
+          <div className="flex items-center shrink-0">
+            <DropdownMenu open={isDropdownOpen} onOpenChange={setIsDropdownOpen}>
+              <DropdownMenuTrigger
+                className="flex items-center gap-1.5 rounded-md bg-muted/30 px-2.5 py-1.5 text-xs font-medium text-muted-foreground hover:text-foreground hover:bg-muted/50 transition-colors outline-none cursor-default"
+                onMouseEnter={() => setIsDropdownOpen(true)}
+              >
+                <div className="relative">
+                  <Server className="h-3.5 w-3.5 text-primary" />
+                  {currentConnection && (
+                    <div className="absolute -bottom-0.5 -right-0.5 h-1.5 w-1.5 rounded-full bg-green-500 border border-background" />
+                  )}
+                </div>
+                <span className="hidden sm:inline max-w-[120px] truncate font-mono">
+                  {currentConnection?.name || "Not connected"}
+                </span>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent
+                align="end"
+                className="w-56"
+                onMouseLeave={() => setIsDropdownOpen(false)}
+              >
+                {currentConnection ? (
+                  <>
+                    <div className="px-3 py-2">
+                      <p className="text-xs font-medium text-foreground">
+                        {currentConnection.name}
+                      </p>
+                      <p className="text-[10px] text-muted-foreground mt-0.5 truncate font-mono">
+                        {currentConnection.url}
+                      </p>
+                    </div>
+                    <DropdownMenuSeparator />
+                  </>
+                ) : null}
+                <DropdownMenuItem
+                  onClick={handleRefresh}
+                  className="text-xs cursor-pointer"
+                >
+                  <RefreshCw className="h-3.5 w-3.5 mr-2" />
+                  Refresh page
+                </DropdownMenuItem>
+                <DropdownMenuItem asChild className="text-xs cursor-pointer">
+                  <Link href="/app">
+                    <LogOut className="h-3.5 w-3.5 mr-2" />
+                    Disconnect
+                  </Link>
+                </DropdownMenuItem>
+              </DropdownMenuContent>
+            </DropdownMenu>
           </div>
-        )}
+        </div>
       </div>
     </header>
   );

@@ -22,6 +22,7 @@ import { ConnectionCard } from "@/components/connections/connection-card";
 import { useRouter } from "next/navigation";
 import { StorageManager } from "@/lib/storage";
 import { testMongoConnection } from "@/lib/mongodb";
+import { validateUrl } from "@/lib/utils";
 import {
   Dialog,
   DialogContent,
@@ -86,52 +87,38 @@ export default function AppPage() {
   };
 
   const handleConnect = async () => {
-    if (!!validationError || !mongoUrl.trim()) {
-    } else {
-      setIsConnecting(true);
-      setValidationError("");
-      try {
-        const response = await testMongoConnection(mongoUrl);
+    const error = validateUrl(mongoUrl);
+    if (error) {
+      setValidationError(error);
+      return;
+    }
 
-        if (!response.success) {
-          setValidationError(response?.message || "Something went wrong");
-        } else {
-          const addedConnection = StorageManager.addConnection(mongoUrl);
-          router.push("/app/databases?connectionId=" + addedConnection);
-        }
-      } catch (e) {
-        setValidationError("Something went wrong, Please try again later.");
-      } finally {
-        setIsConnecting(false);
+    if (!mongoUrl.trim()) {
+      setValidationError("Please enter a valid MongoDB connection string");
+      return;
+    }
+
+    setIsConnecting(true);
+    setValidationError("");
+    try {
+      const response = await testMongoConnection(mongoUrl);
+
+      if (!response.success) {
+        setValidationError(response?.message || "Something went wrong");
+      } else {
+        const addedConnection = StorageManager.addConnection(mongoUrl);
+        router.push("/app/databases?connectionId=" + addedConnection);
       }
+    } catch (e) {
+      setValidationError("Something went wrong, Please try again later.");
+    } finally {
+      setIsConnecting(false);
     }
   };
 
   return (
     <div className="min-h-screen bg-gray-50">
-      <AppHeader type={"connection"} />
-
-      {/* Header Bar */}
-      <div className="bg-white border-b border-gray-200 py-3 sm:py-4">
-        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="flex items-center space-x-4 mb-2 sm:mb-0">
-            <div className="flex items-center space-x-2">
-              <Server className="h-4 w-4 sm:h-5 sm:w-5 text-blue-600" />
-              <h1 className="text-base sm:text-lg font-semibold text-gray-900">
-                MongoDB Connections
-              </h1>
-            </div>
-          </div>
-          <div className="flex items-center space-x-4">
-            {connections.length > 0 && (
-              <div className="text-xs sm:text-sm text-gray-600">
-                {connections.length} saved connection
-                {connections.length !== 1 ? "s" : ""}
-              </div>
-            )}
-          </div>
-        </div>
-      </div>
+      <AppHeader type="connection" />
 
       <div className="max-w-7xl mx-auto py-4 sm:py-6 px-4 sm:px-6 lg:px-8">
         {/* Privacy Alert */}

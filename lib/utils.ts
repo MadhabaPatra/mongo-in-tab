@@ -5,17 +5,90 @@ export function cn(...inputs: ClassValue[]) {
   return twMerge(clsx(inputs));
 }
 
-export function validateUrl(url: string) {
-  if (!url.trim()) {
+const MONGODB_SCHEME_REGEX = /^mongodb(\+srv)?:\/\//i;
+const SUSPICIOUS_URL_PATTERNS = [
+  /\$\{/,
+  /`\$\{/,
+  /\$\(\(/,
+  /\beval\b/i,
+  /\bwhere\b/i,
+  /javascript:/i,
+];
+
+export function validateUrl(url: string): string {
+  if (!url || !url.trim()) {
     return "Please enter a valid MongoDB connection string";
   }
 
-  if (url.includes("localhost") || url.includes("127.0.0.1")) {
-    return "Localhost connections are not supported";
+  const trimmed = url.trim();
+
+  if (!MONGODB_SCHEME_REGEX.test(trimmed)) {
+    return "Please enter a valid MongoDB connection string (must start with mongodb:// or mongodb+srv://)";
   }
 
-  if (!url.startsWith("mongodb://") && !url.startsWith("mongodb+srv://")) {
+  // Parse URL structure
+  try {
+    const urlObj = new URL(trimmed);
+    const hostname = urlObj.hostname;
+
+    if (!hostname) {
+      return "Connection string is missing a valid host";
+    }
+
+    if (hostname === "localhost" || hostname === "127.0.0.1") {
+      return "Localhost connections are not supported";
+    }
+
+    if (hostname.length > 253) {
+      return "Host name is too long";
+    }
+
+    // Block suspicious patterns that could indicate injection attempts
+    for (const pattern of SUSPICIOUS_URL_PATTERNS) {
+      if (pattern.test(trimmed)) {
+        return "Connection string contains invalid characters";
+      }
+    }
+
+    // Block newlines and control characters
+    if (/[\x00-\x08\x0b\x0c\x0e-\x1f\x7f]/.test(trimmed)) {
+      return "Connection string contains invalid characters";
+    }
+  } catch {
     return "Please enter a valid MongoDB connection string";
+  }
+
+  return "";
+}
+
+const MAX_QUERY_STRING_LENGTH = 5000;
+
+export function validateQueryString(queryString: string): string {
+  if (!queryString) {
+    return "";
+  }
+
+  const trimmed = queryString.trim();
+
+  if (trimmed === "{}") {
+    return "";
+  }
+
+  if (trimmed.length > MAX_QUERY_STRING_LENGTH) {
+    return `Query exceeds maximum length of ${MAX_QUERY_STRING_LENGTH} characters`;
+  }
+
+  if (!trimmed.startsWith("{")) {
+    return "Query must be a valid JSON object starting with '{'";
+  }
+
+  try {
+    const parsed = JSON.parse(trimmed);
+    if (parsed === null || typeof parsed !== "object" || Array.isArray(parsed)) {
+      return "Query must be a JSON object, not an array or primitive";
+    }
+  } catch {
+    return "Query is not valid JSON";
   }
 
   return "";

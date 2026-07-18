@@ -26,6 +26,7 @@ yarn-debug.log*
 yarn-error.log*
 
 # local env files
+.env
 .env*.local
 
 # vercel
@@ -37,3 +38,9 @@ next-env.d.ts
 
 # generated data
 /data/testimonials.json
+
+# IDE
+.idea/
+
+# misc temp files
+qisoeqn60kc7f1zbeli48w3cap9892.txt
