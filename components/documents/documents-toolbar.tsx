@@ -17,9 +17,10 @@ import {
   RotateCcw,
   ChevronLeft,
   ChevronRight,
-  Table,
+  ChevronDown,
+  List,
   LayoutGrid,
-  FileJson,
+  Code2,
   Plus,
   Trash2,
   RotateCw,
@@ -31,6 +32,10 @@ import {
   Eye,
   SkipForward,
   Timer,
+  Wrench,
+  Sparkles,
+  Download,
+  Pencil,
 } from "lucide-react";
 import {
   DropdownMenu,
@@ -86,6 +91,9 @@ export function DocumentsToolbar({
 
   const [optionErrors, setOptionErrors] = useState<Record<string, string>>({});
 
+  // Options panel visibility — Compass shows options inline under the query bar
+  const [showOptions, setShowOptions] = useState(true);
+
   useEffect(() => {
     setLocalQuery(query);
     setQueryValid(!validateQueryString(query));
@@ -108,7 +116,7 @@ export function DocumentsToolbar({
   };
 
   const validateOption = (
-    key: string,
+    _key: string,
     value: string,
     isJson = true,
   ): string => {
@@ -188,74 +196,52 @@ export function DocumentsToolbar({
     localQuery !== "{}";
 
   return (
-    <div className="space-y-3">
-      {/* Row 1: Filter bar */}
-      <div className="flex items-start gap-2">
-        <div className="flex-1 relative">
-          <div className="relative">
-            <div className="absolute left-2.5 top-1/2 -translate-y-1/2 flex items-center gap-1 pointer-events-none">
-              <Filter className="h-3.5 w-3.5 text-muted-foreground" />
-              <span className="text-[10px] font-medium text-muted-foreground uppercase tracking-wide">
-                Filter
-              </span>
+    <div className="space-y-0 rounded-lg border border-gray-200 bg-white overflow-hidden">
+      {/* ── Top Query Bar ── */}
+      <div className="flex items-center gap-2 px-3 py-2">
+        {/* History dropdown */}
+        <DropdownMenu>
+          <DropdownMenuTrigger asChild>
+            <Button
+              variant="ghost"
+              size="sm"
+              className="h-7 px-1.5 gap-0.5 text-muted-foreground hover:text-foreground"
+            >
+              <Clock className="h-3.5 w-3.5" />
+              <ChevronDown className="h-3 w-3" />
+            </Button>
+          </DropdownMenuTrigger>
+          <DropdownMenuContent align="start" className="w-64">
+            <div className="px-3 py-2 text-xs text-gray-400 text-center">
+              No query history yet
             </div>
-            <Textarea
-              value={localQuery}
-              onChange={(e) => {
-                setLocalQuery(e.target.value);
-                validateQuery(e.target.value);
-                if (optionErrors.query) {
-                  setOptionErrors((prev) => {
-                    const next = { ...prev };
-                    delete next.query;
-                    return next;
-                  });
-                }
-              }}
-              onKeyDown={handleKeyDown}
-              placeholder="{ }"
-              className={`font-mono text-sm min-h-[36px] max-h-[120px] resize-y py-2 pl-[4.5rem] pr-10 ${
-                optionErrors.query || !queryValid
-                  ? "border-red-500 focus:border-red-500"
-                  : ""
-              }`}
-              rows={1}
-            />
-            {/* History dropdown */}
-            <div className="absolute right-2 top-1/2 -translate-y-1/2">
-              <DropdownMenu>
-                <DropdownMenuTrigger asChild>
-                  <Button
-                    variant="ghost"
-                    size="sm"
-                    className="h-6 w-6 p-0"
-                  >
-                    <History className="h-3.5 w-3.5 text-gray-400" />
-                  </Button>
-                </DropdownMenuTrigger>
-                <DropdownMenuContent align="end" className="w-64">
-                  <div className="px-3 py-2 text-xs text-gray-400 text-center">
-                    No query history yet
-                  </div>
-                </DropdownMenuContent>
-              </DropdownMenu>
-            </div>
-          </div>
-          {(optionErrors.query || !queryValid) && (
-            <p className="text-red-500 text-xs mt-1">
-              {optionErrors.query || "Invalid JSON query syntax"}
-            </p>
-          )}
+          </DropdownMenuContent>
+        </DropdownMenu>
+
+        {/* Hint text */}
+        <div className="hidden sm:flex items-center gap-1 text-xs text-muted-foreground mr-1">
+          <span>Type a query:</span>
+          <code className="text-[11px] font-mono bg-muted px-1 rounded">{"{ field: 'value' }"}</code>
+          <span>or</span>
+          <button
+            onClick={() => toast.info("Query generation coming soon")}
+            className="text-green-700 font-medium hover:underline"
+          >
+            Generate query
+          </button>
+          <Sparkles className="h-3 w-3 text-green-600" />
         </div>
 
-        {/* Find button — Compass green */}
+        <div className="flex-1" />
+
+        {/* Explain */}
         <Button
+          variant="outline"
           size="sm"
-          onClick={handleFind}
-          className="h-9 gap-1.5 bg-green-600 hover:bg-green-700 text-white"
+          onClick={() => toast.info("Explain Plan coming soon")}
+          className="h-7 text-xs gap-1"
         >
-          <Play className="h-3.5 w-3.5" />
-          Find
+          Explain
         </Button>
 
         {/* Reset */}
@@ -264,124 +250,276 @@ export function DocumentsToolbar({
           size="sm"
           onClick={handleReset}
           disabled={!hasActiveOptions}
-          className="h-9 gap-1.5"
+          className="h-7 text-xs gap-1"
         >
-          <RotateCcw className="h-3.5 w-3.5" />
+          <RotateCcw className="h-3 w-3" />
           Reset
         </Button>
+
+        {/* Find — green */}
+        <Button
+          size="sm"
+          onClick={handleFind}
+          className="h-7 text-xs gap-1 bg-green-700 hover:bg-green-800 text-white"
+        >
+          <Play className="h-3 w-3" />
+          Find
+        </Button>
+
+        {/* Export to Language */}
+        <Button
+          variant="outline"
+          size="sm"
+          onClick={() => toast.info("Export to Language coming soon")}
+          className="h-7 w-7 p-0"
+        >
+          <Code2 className="h-3.5 w-3.5" />
+        </Button>
+
+        {/* Options toggle */}
+        <button
+          onClick={() => setShowOptions((s) => !s)}
+          className="flex items-center gap-0.5 text-xs text-blue-600 hover:text-blue-700 font-medium px-1.5 py-1 rounded hover:bg-blue-50 transition-colors"
+        >
+          Options
+          <ChevronDown
+            className={`h-3 w-3 transition-transform ${showOptions ? "rotate-180" : ""}`}
+          />
+        </button>
       </div>
 
-      {/* Row 2: Options bar — Project, Sort, Skip, Limit, Max Time */}
-      <div className="flex flex-wrap items-start gap-3">
-        {/* Project */}
-        <div className="flex-1 min-w-[180px]">
-          <div className="flex items-center gap-1 mb-1">
-            <Eye className="h-3 w-3 text-muted-foreground" />
-            <span className="text-[10px] font-medium text-muted-foreground uppercase tracking-wide">
+      {/* ── Query input ── */}
+      <div className="px-3 pb-2">
+        <div className="relative">
+          <Textarea
+            value={localQuery}
+            onChange={(e) => {
+              setLocalQuery(e.target.value);
+              validateQuery(e.target.value);
+              if (optionErrors.query) {
+                setOptionErrors((prev) => {
+                  const next = { ...prev };
+                  delete next.query;
+                  return next;
+                });
+              }
+            }}
+            onKeyDown={handleKeyDown}
+            placeholder="{ }"
+            className={`font-mono text-sm min-h-[32px] max-h-[120px] resize-y py-1.5 px-3 ${
+              optionErrors.query || !queryValid
+                ? "border-red-400 focus:border-red-400 focus:ring-red-100"
+                : "border-gray-200"
+            }`}
+            rows={1}
+          />
+        </div>
+        {(optionErrors.query || !queryValid) && (
+          <p className="text-red-500 text-xs mt-1">
+            {optionErrors.query || "Invalid JSON query syntax"}
+          </p>
+        )}
+      </div>
+
+      {/* ── Options Panel ── */}
+      {showOptions && (
+        <div className="border-t border-gray-100 px-3 py-3 space-y-3">
+          {/* Project */}
+          <div className="flex items-start gap-3">
+            <label className="w-28 shrink-0 pt-1.5 text-xs font-semibold text-foreground text-right">
               Project
-            </span>
+            </label>
+            <div className="flex-1">
+              <Textarea
+                value={localProject}
+                onChange={(e) => {
+                  setLocalProject(e.target.value);
+                  if (optionErrors.project) {
+                    setOptionErrors((prev) => {
+                      const next = { ...prev };
+                      delete next.project;
+                      return next;
+                    });
+                  }
+                }}
+                placeholder="{ field: 0 }"
+                className={`font-mono text-sm min-h-[28px] max-h-[80px] resize-y py-1.5 px-3 ${
+                  optionErrors.project ? "border-red-400 focus:border-red-400" : "border-gray-200"
+                }`}
+                rows={1}
+              />
+              {optionErrors.project && (
+                <p className="text-red-500 text-xs mt-0.5">
+                  {optionErrors.project}
+                </p>
+              )}
+            </div>
           </div>
-          <Textarea
-            value={localProject}
-            onChange={(e) => {
-              setLocalProject(e.target.value);
-              if (optionErrors.project) {
-                setOptionErrors((prev) => {
-                  const next = { ...prev };
-                  delete next.project;
-                  return next;
-                });
-              }
-            }}
-            placeholder="{ }"
-            className={`font-mono text-sm min-h-[32px] max-h-[80px] resize-y py-1.5 px-2 ${
-              optionErrors.project ? "border-red-500 focus:border-red-500" : ""
-            }`}
-            rows={1}
-          />
-          {optionErrors.project && (
-            <p className="text-red-500 text-xs mt-0.5">
-              {optionErrors.project}
-            </p>
-          )}
-        </div>
 
-        {/* Sort */}
-        <div className="flex-1 min-w-[180px]">
-          <div className="flex items-center gap-1 mb-1">
-            <ArrowUpDown className="h-3 w-3 text-muted-foreground" />
-            <span className="text-[10px] font-medium text-muted-foreground uppercase tracking-wide">
+          {/* Sort */}
+          <div className="flex items-start gap-3">
+            <label className="w-28 shrink-0 pt-1.5 text-xs font-semibold text-foreground text-right">
               Sort
-            </span>
-          </div>
-          <Textarea
-            value={localSort}
-            onChange={(e) => {
-              setLocalSort(e.target.value);
-              if (optionErrors.sort) {
-                setOptionErrors((prev) => {
-                  const next = { ...prev };
-                  delete next.sort;
-                  return next;
-                });
-              }
-            }}
-            placeholder="{ }"
-            className={`font-mono text-sm min-h-[32px] max-h-[80px] resize-y py-1.5 px-2 ${
-              optionErrors.sort ? "border-red-500 focus:border-red-500" : ""
-            }`}
-            rows={1}
-          />
-          {optionErrors.sort && (
-            <p className="text-red-500 text-xs mt-0.5">{optionErrors.sort}</p>
-          )}
-        </div>
+            </label>
+            <div className="flex-1">
+              <Textarea
+                value={localSort}
+                onChange={(e) => {
+                  setLocalSort(e.target.value);
+                  if (optionErrors.sort) {
+                    setOptionErrors((prev) => {
+                      const next = { ...prev };
+                      delete next.sort;
+                      return next;
+                    });
+                  }
+                }}
+                placeholder="{ field: -1 } or [['field', -1]]"
+                className={`font-mono text-sm min-h-[28px] max-h-[80px] resize-y py-1.5 px-3 ${
+                  optionErrors.sort ? "border-red-400 focus:border-red-400" : "border-gray-200"
+                }`}
+                rows={1}
+              />
+              {optionErrors.sort && (
+                <p className="text-red-500 text-xs mt-0.5">
+                  {optionErrors.sort}
+                </p>
+              )}
+            </div>
 
-        {/* Skip */}
-        <div className="w-[80px]">
-          <div className="flex items-center gap-1 mb-1">
-            <SkipForward className="h-3 w-3 text-muted-foreground" />
-            <span className="text-[10px] font-medium text-muted-foreground uppercase tracking-wide">
-              Skip
-            </span>
+            {/* Right side: Max Time MS */}
+            <div className="w-40 shrink-0 flex items-start gap-2">
+              <label className="text-xs font-semibold text-foreground pt-1.5 whitespace-nowrap">
+                Max Time MS
+              </label>
+              <Input
+                type="number"
+                min={1}
+                value={localMaxTime}
+                onChange={(e) => {
+                  setLocalMaxTime(e.target.value);
+                  if (optionErrors.maxTimeMS) {
+                    setOptionErrors((prev) => {
+                      const next = { ...prev };
+                      delete next.maxTimeMS;
+                      return next;
+                    });
+                  }
+                }}
+                placeholder="60000"
+                className={`font-mono text-sm h-8 py-1 px-2 ${
+                  optionErrors.maxTimeMS ? "border-red-400" : "border-gray-200"
+                }`}
+              />
+            </div>
           </div>
-          <Input
-            type="number"
-            min={0}
-            value={localSkip}
-            onChange={(e) => {
-              setLocalSkip(e.target.value);
-              if (optionErrors.skip) {
-                setOptionErrors((prev) => {
-                  const next = { ...prev };
-                  delete next.skip;
-                  return next;
-                });
-              }
-            }}
-            placeholder="0"
-            className={`font-mono text-sm h-8 py-1 px-2 ${
-              optionErrors.skip ? "border-red-500" : ""
-            }`}
-          />
-          {optionErrors.skip && (
-            <p className="text-red-500 text-xs mt-0.5">{optionErrors.skip}</p>
-          )}
-        </div>
 
-        {/* Limit */}
-        <div className="w-[90px]">
-          <div className="flex items-center gap-1 mb-1">
-            <span className="text-[10px] font-medium text-muted-foreground uppercase tracking-wide">
-              Limit
-            </span>
+          {/* Skip + Limit row */}
+          <div className="flex items-start gap-3">
+            <div className="w-28 shrink-0" />{/* spacer for label column */}
+            <div className="flex-1" />
+            <div className="flex items-start gap-4">
+              <div className="w-28 shrink-0 flex items-start gap-2">
+                <label className="text-xs font-semibold text-foreground pt-1.5 whitespace-nowrap">
+                  Skip
+                </label>
+                <Input
+                  type="number"
+                  min={0}
+                  value={localSkip}
+                  onChange={(e) => {
+                    setLocalSkip(e.target.value);
+                    if (optionErrors.skip) {
+                      setOptionErrors((prev) => {
+                        const next = { ...prev };
+                        delete next.skip;
+                        return next;
+                      });
+                    }
+                  }}
+                  placeholder="0"
+                  className={`font-mono text-sm h-8 py-1 px-2 ${
+                    optionErrors.skip ? "border-red-400" : "border-gray-200"
+                  }`}
+                />
+                {optionErrors.skip && (
+                  <p className="text-red-500 text-xs mt-0.5">
+                    {optionErrors.skip}
+                  </p>
+                )}
+              </div>
+              <div className="w-28 shrink-0 flex items-start gap-2">
+                <label className="text-xs font-semibold text-foreground pt-1.5 whitespace-nowrap">
+                  Limit
+                </label>
+                <Input
+                  type="number"
+                  min={1}
+                  value={localLimit}
+                  onChange={(e) => setLocalLimit(e.target.value)}
+                  placeholder="0"
+                  className="font-mono text-sm h-8 py-1 px-2 border-gray-200"
+                />
+              </div>
+            </div>
           </div>
-          <Select
-            value={localLimit}
-            onValueChange={(v) => setLocalLimit(v)}
+        </div>
+      )}
+
+      {/* ── Bottom Action + Pagination Bar ── */}
+      <div className="border-t border-gray-200 px-3 py-2 flex items-center justify-between bg-gray-50/50">
+        {/* Left: Data actions */}
+        <div className="flex items-center gap-2">
+          <Button
+            size="sm"
+            onClick={() => toast.info("Add Data coming soon")}
+            className="h-7 gap-1.5 text-xs bg-green-700 hover:bg-green-800 text-white"
           >
-            <SelectTrigger className="h-8 text-xs font-mono bg-white">
-              {localLimit}
+            <Plus className="h-3.5 w-3.5" />
+            ADD DATA
+          </Button>
+
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() => toast.info("Export Data coming soon")}
+            className="h-7 gap-1.5 text-xs"
+          >
+            <Download className="h-3.5 w-3.5" />
+            EXPORT DATA
+            <ChevronDown className="h-3 w-3" />
+          </Button>
+
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() => toast.info("Update coming soon")}
+            className="h-7 gap-1.5 text-xs"
+          >
+            <Pencil className="h-3.5 w-3.5" />
+            UPDATE
+          </Button>
+
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() => toast.info("Delete coming soon")}
+            className="h-7 gap-1.5 text-xs text-red-600 hover:text-red-700 hover:bg-red-50"
+          >
+            <Trash2 className="h-3.5 w-3.5" />
+            DELETE
+          </Button>
+        </div>
+
+        {/* Right: Pagination + View */}
+        <div className="flex items-center gap-3">
+          {/* Per page */}
+          <Select
+            value={limit.toString()}
+            onValueChange={(v) => onLimitChange(Number.parseInt(v))}
+          >
+            <SelectTrigger className="h-7 text-xs w-[70px] bg-white border-gray-300 text-center justify-center font-mono">
+              {limit}
             </SelectTrigger>
             <SelectContent>
               <SelectItem value="25">25</SelectItem>
@@ -391,69 +529,7 @@ export function DocumentsToolbar({
               <SelectItem value="500">500</SelectItem>
             </SelectContent>
           </Select>
-        </div>
 
-        {/* Max Time */}
-        <div className="w-[100px]">
-          <div className="flex items-center gap-1 mb-1">
-            <Timer className="h-3 w-3 text-muted-foreground" />
-            <span className="text-[10px] font-medium text-muted-foreground uppercase tracking-wide">
-              Max Time
-            </span>
-          </div>
-          <Input
-            type="number"
-            min={1}
-            value={localMaxTime}
-            onChange={(e) => {
-              setLocalMaxTime(e.target.value);
-              if (optionErrors.maxTimeMS) {
-                setOptionErrors((prev) => {
-                  const next = { ...prev };
-                  delete next.maxTimeMS;
-                  return next;
-                });
-              }
-            }}
-            placeholder="ms"
-            className={`font-mono text-sm h-8 py-1 px-2 ${
-              optionErrors.maxTimeMS ? "border-red-500" : ""
-            }`}
-          />
-          {optionErrors.maxTimeMS && (
-            <p className="text-red-500 text-xs mt-0.5">
-              {optionErrors.maxTimeMS}
-            </p>
-          )}
-        </div>
-      </div>
-
-      {/* Row 3: Actions + Pagination + View Toggle */}
-      <div className="flex items-center justify-between pt-1">
-        {/* Left: Action buttons */}
-        <div className="flex items-center gap-2">
-          <Button
-            variant="outline"
-            size="sm"
-            className="gap-1.5 h-8"
-            onClick={() => toast.info("Add Data coming soon")}
-          >
-            <Plus className="h-3.5 w-3.5" />
-            Add Data
-          </Button>
-          <Button
-            variant="outline"
-            size="sm"
-            className="gap-1.5 h-8 text-red-600 hover:text-red-700 hover:bg-red-50"
-            onClick={() => toast.info("Delete coming soon")}
-          >
-            <Trash2 className="h-3.5 w-3.5" />
-            Delete
-          </Button>
-        </div>
-
-        {/* Right: Pagination + View Toggle */}
-        <div className="flex items-center gap-3">
           {/* Results info */}
           <span className="text-xs text-gray-500 whitespace-nowrap">
             <span className="font-medium text-gray-900">
@@ -465,22 +541,12 @@ export function DocumentsToolbar({
             </span>
           </span>
 
-          {/* Field count */}
-          {fields && fields.length > 0 && (
-            <span className="text-xs text-gray-500 whitespace-nowrap">
-              •{" "}
-              <span className="font-medium text-gray-900">
-                {fields.length} fields
-              </span>
-            </span>
-          )}
-
           {/* Refresh */}
           <Button
             variant="ghost"
             size="sm"
             onClick={onRefresh}
-            className="h-8 w-8 p-0"
+            className="h-7 w-7 p-0"
           >
             <RotateCw className="h-3.5 w-3.5" />
           </Button>
@@ -492,7 +558,7 @@ export function DocumentsToolbar({
               size="sm"
               onClick={() => onPageChange(pagination.currentPage - 1)}
               disabled={isFirstPage}
-              className="h-8 w-8 p-0"
+              className="h-7 w-7 p-0"
             >
               <ChevronLeft className="h-4 w-4" />
             </Button>
@@ -501,41 +567,44 @@ export function DocumentsToolbar({
               size="sm"
               onClick={() => onPageChange(pagination.currentPage + 1)}
               disabled={isLastPage}
-              className="h-8 w-8 p-0"
+              className="h-7 w-7 p-0"
             >
               <ChevronRight className="h-4 w-4" />
             </Button>
           </div>
 
-          {/* View mode toggle */}
-          <div className="flex items-center rounded-md border border-gray-300 p-0.5">
-            <Button
-              variant={viewMode === "table" ? "default" : "ghost"}
-              size="sm"
+          {/* View mode toggle — Compass icons */}
+          <div className="flex items-center rounded-md border border-gray-300 overflow-hidden">
+            <button
               onClick={() => onViewModeChange("table")}
-              className="h-7 px-2 text-xs gap-1"
+              className={`flex items-center gap-1 px-2.5 py-1 text-xs transition-colors ${
+                viewMode === "table"
+                  ? "bg-gray-900 text-white"
+                  : "bg-white text-gray-600 hover:bg-gray-100"
+              }`}
             >
-              <Table className="h-3 w-3" />
-              Table
-            </Button>
-            <Button
-              variant={viewMode === "card" ? "default" : "ghost"}
-              size="sm"
-              onClick={() => onViewModeChange("card")}
-              className="h-7 px-2 text-xs gap-1"
-            >
-              <LayoutGrid className="h-3 w-3" />
-              Card
-            </Button>
-            <Button
-              variant={viewMode === "json" ? "default" : "ghost"}
-              size="sm"
+              <List className="h-3.5 w-3.5" />
+            </button>
+            <button
               onClick={() => onViewModeChange("json")}
-              className="h-7 px-2 text-xs gap-1"
+              className={`flex items-center gap-1 px-2.5 py-1 text-xs transition-colors border-l border-gray-300 ${
+                viewMode === "json"
+                  ? "bg-gray-900 text-white"
+                  : "bg-white text-gray-600 hover:bg-gray-100"
+              }`}
             >
-              <FileJson className="h-3 w-3" />
-              JSON
-            </Button>
+              <span className="font-mono text-[10px] leading-none">{"{}"}</span>
+            </button>
+            <button
+              onClick={() => onViewModeChange("card")}
+              className={`flex items-center gap-1 px-2.5 py-1 text-xs transition-colors border-l border-gray-300 ${
+                viewMode === "card"
+                  ? "bg-gray-900 text-white"
+                  : "bg-white text-gray-600 hover:bg-gray-100"
+              }`}
+            >
+              <LayoutGrid className="h-3.5 w-3.5" />
+            </button>
           </div>
         </div>
       </div>
