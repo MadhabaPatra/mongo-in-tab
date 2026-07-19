@@ -60,17 +60,36 @@ export default function DocumentsContent() {
   const [viewMode, setViewMode] = useState<"table" | "card" | "json">("table");
   const [limit, setLimit] = useState(25);
 
+  // Scroll to top on mount / navigation
   useEffect(() => {
-    loadCollections();
+    window.scrollTo(0, 0);
   }, []);
 
+  // Sync currentCollection with URL param (handles hydration / stale searchParams)
   useEffect(() => {
-    if (currentCollection) {
-      const params = new URLSearchParams(window.location.search);
+    if (collectionName && collectionName !== currentCollection) {
+      setCurrentCollection(collectionName);
+    }
+  }, [collectionName]);
+
+  useEffect(() => {
+    if (connectionId && database) {
+      loadCollections();
+    }
+  }, [connectionId, database]);
+
+  useEffect(() => {
+    if (!currentCollection) return;
+
+    const params = new URLSearchParams(searchParams.toString());
+    const urlCollection = params.get("collectionName");
+
+    if (urlCollection !== currentCollection) {
       params.set("collectionName", currentCollection);
       router.replace(`?${params.toString()}`);
-      loadDocuments(limit, 1);
     }
+
+    loadDocuments(limit, 1);
   }, [currentCollection, mongoQuery, queryOptions, limit]);
 
   const loadCollections = async () => {

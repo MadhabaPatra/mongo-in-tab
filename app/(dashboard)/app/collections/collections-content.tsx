@@ -109,14 +109,33 @@ export default function CollectionsContent() {
     }
   };
 
+  // Scroll to top on mount / navigation
   useEffect(() => {
-    loadDatabases();
+    window.scrollTo(0, 0);
   }, []);
 
+  // Sync currentDatabase with URL param (handles hydration / stale searchParams)
   useEffect(() => {
-    const params = new URLSearchParams(window.location.search);
-    params.set("database", currentDatabase);
-    router.replace(`?${params.toString()}`);
+    if (database && database !== currentDatabase) {
+      setCurrentDatabase(database);
+    }
+  }, [database]);
+
+  useEffect(() => {
+    if (connectionId) {
+      loadDatabases();
+    }
+  }, [connectionId]);
+
+  useEffect(() => {
+    const params = new URLSearchParams(searchParams.toString());
+    const urlDatabase = params.get("database");
+
+    if (urlDatabase !== currentDatabase) {
+      params.set("database", currentDatabase);
+      router.replace(`?${params.toString()}`);
+    }
+
     if (currentDatabase) {
       loadCollections();
     }
@@ -214,7 +233,12 @@ export default function CollectionsContent() {
         ) : filteredCollections.length > 0 ? (
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
             {filteredCollections.map((collection, i) => (
-              <CollectionCard collection={collection} key={i} />
+              <CollectionCard
+                collection={collection}
+                connectionId={connectionId!}
+                database={database!}
+                key={i}
+              />
             ))}
           </div>
         ) : (

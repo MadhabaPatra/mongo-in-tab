@@ -43,6 +43,7 @@ export function ConnectionCard({
   }, [isEditing]);
 
   const onClickConnect = () => {
+    window.scrollTo(0, 0);
     router.push("/app/databases?connectionId=" + connection.id);
   };
 

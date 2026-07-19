@@ -2,14 +2,19 @@
 import { Card } from "@/components/ui/card";
 import { Database, ChevronRight } from "lucide-react";
 import { formatBytes } from "@/lib/utils";
-import { useRouter, useSearchParams } from "next/navigation";
+import { useRouter } from "next/navigation";
 
-export function DatabaseCard({ database }: { database: IDatabase }) {
+export function DatabaseCard({
+  database,
+  connectionId,
+}: {
+  database: IDatabase;
+  connectionId: string;
+}) {
   const router = useRouter();
-  const searchParams = useSearchParams();
-  const connectionId = searchParams.get("connectionId");
 
   const onClick = () => {
+    window.scrollTo(0, 0);
     router.push(
       `/app/collections?connectionId=${connectionId}&database=${database.name}`,
     );

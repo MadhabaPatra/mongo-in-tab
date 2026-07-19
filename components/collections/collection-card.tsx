@@ -1,15 +1,21 @@
 "use client";
 import { Card } from "@/components/ui/card";
 import { Table, ChevronRight } from "lucide-react";
-import { useRouter, useSearchParams } from "next/navigation";
+import { useRouter } from "next/navigation";
 
-export function CollectionCard({ collection }: { collection: ICollection }) {
+export function CollectionCard({
+  collection,
+  connectionId,
+  database,
+}: {
+  collection: ICollection;
+  connectionId: string;
+  database: string;
+}) {
   const router = useRouter();
-  const searchParams = useSearchParams();
-  const connectionId = searchParams.get("connectionId");
-  const database = searchParams.get("database");
 
   const onClick = () => {
+    window.scrollTo(0, 0);
     router.push(
       `/app/documents?connectionId=${connectionId}&database=${database}&collectionName=${collection.name}`,
     );

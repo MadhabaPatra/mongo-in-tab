@@ -60,6 +60,7 @@ export default function DatabasesContent() {
   };
 
   useEffect(() => {
+    window.scrollTo(0, 0);
     loadDatabases();
   }, []);
 
@@ -125,7 +126,7 @@ export default function DatabasesContent() {
         ) : filteredDatabases.length > 0 ? (
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
             {filteredDatabases.map((db, i) => (
-              <DatabaseCard database={db} key={i} />
+              <DatabaseCard database={db} connectionId={connectionId!} key={i} />
             ))}
           </div>
         ) : (
