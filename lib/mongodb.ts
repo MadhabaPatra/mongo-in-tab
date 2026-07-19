@@ -225,15 +225,16 @@ export async function fetchDocuments(
       throw new Error("Database name and collection name are required");
     }
 
-    if (page < 1) page = 1;
-    if (limit < 1) limit = 20;
+    // Sanitize numeric params to prevent NaN / invalid values
+    const safePage = Number.isFinite(page) && page >= 1 ? Math.floor(page) : 1;
+    const safeLimit = Number.isFinite(limit) && limit >= 1 ? Math.floor(limit) : 20;
 
     const client = await getMongoClient(connectionUrl);
     const database = client.db(databaseName);
     const collection = database.collection(collectionName);
 
     let query: Record<string, any> = {};
-    if (query_string && query_string !== "{}") {
+    if (query_string && query_string.trim() && query_string.trim() !== "{}") {
       query = parseAndSanitizeQuery(query_string);
     }
 
@@ -245,8 +246,8 @@ export async function fetchDocuments(
     if (options?.sort && options.sort.trim() && options.sort !== "{}") {
       findOptions.sort = parseAndSanitizeQuery(options.sort);
     }
-    if (options?.maxTimeMS && options.maxTimeMS > 0) {
-      findOptions.maxTimeMS = options.maxTimeMS;
+    if (options?.maxTimeMS && Number.isFinite(options.maxTimeMS) && options.maxTimeMS > 0) {
+      findOptions.maxTimeMS = Math.floor(options.maxTimeMS);
     }
 
     let totalDocuments = 0;
@@ -256,13 +257,44 @@ export async function fetchDocuments(
       totalDocuments = await collection.estimatedDocumentCount();
     }
 
-    const totalPages =
-      totalDocuments > 0 ? Math.ceil(totalDocuments / limit) : 1;
-    if (page > totalPages) page = totalPages;
+    const rawSkip = options?.skip;
+    const optionSkip =
+      rawSkip !== undefined && rawSkip !== null && Number.isFinite(rawSkip) && rawSkip >= 0
+        ? Math.floor(rawSkip)
+        : 0;
 
-    const skip = (page - 1) * limit;
+    const rawQueryLimit = options?.limit;
+    const queryLimit =
+      rawQueryLimit !== undefined && rawQueryLimit !== null && Number.isFinite(rawQueryLimit) && rawQueryLimit >= 1
+        ? Math.floor(rawQueryLimit)
+        : undefined;
+
+    // effectiveTotal = documents remaining after the initial skip, capped by query-level limit
+    let effectiveTotal = Math.max(0, totalDocuments - optionSkip);
+    if (queryLimit !== undefined) {
+      effectiveTotal = Math.min(effectiveTotal, queryLimit);
+    }
+
+    const totalPages =
+      effectiveTotal > 0 ? Math.ceil(effectiveTotal / safeLimit) : 1;
+    const safePageNum = safePage > totalPages ? totalPages : safePage;
+
+    const pageSkip = (safePageNum - 1) * safeLimit;
+    const totalSkip = pageSkip + optionSkip;
+
+    // Cap the page fetch by the remaining query-level limit
+    const alreadyTaken = (safePageNum - 1) * safeLimit;
+    const remainingQueryLimit =
+      queryLimit !== undefined
+        ? Math.max(0, queryLimit - alreadyTaken)
+        : undefined;
+    const pageLimit =
+      remainingQueryLimit !== undefined
+        ? Math.min(safeLimit, remainingQueryLimit)
+        : safeLimit;
+
     let cursor = collection.find(query, findOptions);
-    cursor = cursor.skip(skip).limit(limit);
+    cursor = cursor.skip(totalSkip).limit(pageLimit);
     const documents = await cursor.toArray();
 
     // Extract fields only from the current page's documents
@@ -280,21 +312,23 @@ export async function fetchDocuments(
 
     const serializedDocs = documents.map(serializeDocument) as IDocument[];
 
+    // Pagination numbers are relative to the skipped subset so page 1 always starts at 1
     return {
       success: true,
       data: {
         documents: serializedDocs,
         fields,
         pagination: {
-          currentPage: totalDocuments > 0 ? page : 0,
-          totalPages: totalDocuments > 0 ? totalPages : 0,
-          totalDocuments,
-          start: totalDocuments > 0 ? skip + 1 : 0,
-          end: totalDocuments > 0 ? skip + documents.length : 0,
+          currentPage: effectiveTotal > 0 ? safePageNum : 0,
+          totalPages: effectiveTotal > 0 ? totalPages : 0,
+          totalDocuments: effectiveTotal,
+          start: effectiveTotal > 0 ? pageSkip + 1 : 0,
+          end: effectiveTotal > 0 ? pageSkip + documents.length : 0,
         },
       },
     };
   } catch (error: any) {
+    console.error("[fetchDocuments error]", error);
     return {
       success: false,
       message: error?.message || "Failed to fetch documents",

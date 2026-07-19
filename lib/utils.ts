@@ -61,6 +61,8 @@ export function validateUrl(url: string): string {
   return "";
 }
 
+import { validateMongoQuery } from "./mongo-query-parser";
+
 const MAX_QUERY_STRING_LENGTH = 5000;
 
 export function validateQueryString(queryString: string): string {
@@ -82,16 +84,8 @@ export function validateQueryString(queryString: string): string {
     return "Query must be a valid JSON object starting with '{'";
   }
 
-  try {
-    const parsed = JSON.parse(trimmed);
-    if (parsed === null || typeof parsed !== "object" || Array.isArray(parsed)) {
-      return "Query must be a JSON object, not an array or primitive";
-    }
-  } catch {
-    return "Query is not valid JSON";
-  }
-
-  return "";
+  // Use MongoDB shell-style parser (supports unquoted keys)
+  return validateMongoQuery(trimmed);
 }
 
 export function generateId() {

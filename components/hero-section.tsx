@@ -50,7 +50,12 @@ export function HeroSection() {
       try {
         const response = await testMongoConnection(mongoUrl);
 
-        if (!response.success) {
+        if (!response || typeof response !== "object") {
+          setValidationError("Server returned an invalid response. Please try again.");
+          setIsShaking(true);
+          setTimeout(() => setIsShaking(false), 600);
+          inputRef.current?.focus();
+        } else if (!response.success) {
           setValidationError(response?.message || "Something went wrong");
           setIsShaking(true);
           setTimeout(() => setIsShaking(false), 600);

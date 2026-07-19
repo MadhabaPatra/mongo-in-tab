@@ -45,6 +45,9 @@ export default function DatabasesContent() {
       }
 
       const response = await fetchDatabases(connectionData.url);
+      if (!response || typeof response !== "object") {
+        throw new Error("Server returned an invalid response. Please try again.");
+      }
       if (!response.success) {
         throw new Error(response.message || "Failed to fetch databases");
       } else {

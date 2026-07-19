@@ -49,7 +49,7 @@ function isCollapsible(value: unknown): boolean {
 /* ------------------------------------------------------------------ */
 
 const TOK = {
-  key:     "text-gray-800",
+  key:     "text-gray-700 font-medium",
   string:  "text-green-700",
   number:  "text-blue-600",
   bool:    "text-purple-600",
@@ -144,7 +144,7 @@ function TreeNode({
         <div className="w-4 shrink-0" />
         {property !== undefined && (
           <>
-            <span className={TOK.key}>&quot;{property}&quot;</span>
+            <span className={TOK.key}>{property}</span>
             <span className={`${TOK.colon} mx-1`}>:</span>
           </>
         )}
@@ -165,7 +165,7 @@ function TreeNode({
         <ChevronBtn collapsed={true} onClick={localToggle} />
         {property !== undefined && (
           <>
-            <span className={TOK.key}>&quot;{property}&quot;</span>
+            <span className={TOK.key}>{property}</span>
             <span className={`${TOK.colon} mx-1`}>:</span>
           </>
         )}
@@ -194,7 +194,7 @@ function TreeNode({
         <ChevronBtn collapsed={false} onClick={localToggle} />
         {property !== undefined && (
           <>
-            <span className={TOK.key}>&quot;{property}&quot;</span>
+            <span className={TOK.key}>{property}</span>
             <span className={`${TOK.colon} mx-1`}>:</span>
           </>
         )}

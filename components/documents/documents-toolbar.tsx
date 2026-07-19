@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef, useCallback } from "react";
 import { Button } from "@/components/ui/button";
 import {
   Select,
@@ -35,6 +35,12 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from "@/components/ui/tooltip";
 
 interface DocumentsToolbarProps {
   query: string;
@@ -53,6 +59,35 @@ interface DocumentsToolbarProps {
   fields?: string[];
 }
 
+/* ───────────────── helpers ───────────────── */
+
+function getTokenBeforeCursor(text: string, cursor: number): string {
+  const before = text.slice(0, cursor);
+  // find last separator
+  const seps = /[\s{}\[\](),:"']/g;
+  let lastIdx = -1;
+  let m: RegExpExecArray | null;
+  while ((m = seps.exec(before)) !== null) {
+    lastIdx = m.index;
+  }
+  return before.slice(lastIdx + 1);
+}
+
+function replaceTokenAtCursor(
+  text: string,
+  cursor: number,
+  token: string,
+  replacement: string,
+): { text: string; cursor: number } {
+  const before = text.slice(0, cursor);
+  const after = text.slice(cursor);
+  const tokenStart = before.length - token.length;
+  const newText = before.slice(0, tokenStart) + replacement + after;
+  return { text: newText, cursor: tokenStart + replacement.length };
+}
+
+/* ───────────────── component ───────────────── */
+
 export function DocumentsToolbar({
   query,
   onQueryChange,
@@ -67,7 +102,7 @@ export function DocumentsToolbar({
   onRefresh,
   viewMode,
   onViewModeChange,
-  fields,
+  fields = [],
 }: DocumentsToolbarProps) {
   const [localQuery, setLocalQuery] = useState(query);
   const [queryValid, setQueryValid] = useState(true);
@@ -76,15 +111,24 @@ export function DocumentsToolbar({
   const [localProject, setLocalProject] = useState(options.project || "{}");
   const [localSort, setLocalSort] = useState(options.sort || "{}");
   const [localSkip, setLocalSkip] = useState(options.skip?.toString() ?? "");
-  const [localLimit, setLocalLimit] = useState(limit.toString());
+  const [localQueryLimit, setLocalQueryLimit] = useState(
+    options.limit?.toString() ?? "",
+  );
   const [localMaxTime, setLocalMaxTime] = useState(
     options.maxTimeMS?.toString() ?? "",
   );
 
   const [optionErrors, setOptionErrors] = useState<Record<string, string>>({});
 
-  // Options panel visibility — Compass shows options inline under the query bar
+  // Options panel visibility
   const [showOptions, setShowOptions] = useState(false);
+
+  // ── Suggestion state ──
+  const queryRef = useRef<HTMLTextAreaElement>(null);
+  const [suggestions, setSuggestions] = useState<string[]>([]);
+  const [activeSuggestion, setActiveSuggestion] = useState(0);
+  const [showSuggestions, setShowSuggestions] = useState(false);
+  const suggestionsRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     setLocalQuery(query);
@@ -95,12 +139,9 @@ export function DocumentsToolbar({
     setLocalProject(options.project || "{}");
     setLocalSort(options.sort || "{}");
     setLocalSkip(options.skip?.toString() ?? "");
+    setLocalQueryLimit(options.limit?.toString() ?? "");
     setLocalMaxTime(options.maxTimeMS?.toString() ?? "");
   }, [options]);
-
-  useEffect(() => {
-    setLocalLimit(limit.toString());
-  }, [limit]);
 
   const validateQuery = (value: string) => {
     const err = validateQueryString(value);
@@ -125,10 +166,12 @@ export function DocumentsToolbar({
     const pErr = validateOption("project", localProject);
     const sErr = validateOption("sort", localSort);
     const skipNum = localSkip ? Number.parseInt(localSkip) : undefined;
+    const queryLimitNum = localQueryLimit
+      ? Number.parseInt(localQueryLimit)
+      : undefined;
     const maxTimeNum = localMaxTime
       ? Number.parseInt(localMaxTime)
       : undefined;
-    const limitNum = Number.parseInt(localLimit) || 25;
 
     const errors: Record<string, string> = {};
     if (qErr) errors.query = qErr;
@@ -136,6 +179,12 @@ export function DocumentsToolbar({
     if (sErr) errors.sort = sErr;
     if (localSkip && (Number.isNaN(skipNum) || (skipNum ?? -1) < 0)) {
       errors.skip = "Skip must be >= 0";
+    }
+    if (
+      localQueryLimit &&
+      (Number.isNaN(queryLimitNum) || (queryLimitNum ?? 0) < 1)
+    ) {
+      errors.limit = "Limit must be >= 1";
     }
     if (localMaxTime && (Number.isNaN(maxTimeNum) || (maxTimeNum ?? 0) < 1)) {
       errors.maxTimeMS = "Max time must be >= 1";
@@ -153,9 +202,9 @@ export function DocumentsToolbar({
       project: localProject === "{}" ? undefined : localProject,
       sort: localSort === "{}" ? undefined : localSort,
       skip: skipNum,
+      limit: queryLimitNum && queryLimitNum >= 1 ? queryLimitNum : undefined,
       maxTimeMS: maxTimeNum,
     });
-    onLimitChange(limitNum);
     onRunQuery();
   };
 
@@ -164,18 +213,121 @@ export function DocumentsToolbar({
     setLocalProject("{}");
     setLocalSort("{}");
     setLocalSkip("");
-    setLocalLimit("25");
+    setLocalQueryLimit("");
     setLocalMaxTime("");
     setOptionErrors({});
     setQueryValid(true);
+    setShowSuggestions(false);
     onReset();
   };
 
   const handleKeyDown = (e: React.KeyboardEvent) => {
     if ((e.metaKey || e.ctrlKey) && e.key === "Enter") {
       handleFind();
+      return;
+    }
+
+    // Suggestion navigation
+    if (showSuggestions) {
+      if (e.key === "ArrowDown") {
+        e.preventDefault();
+        setActiveSuggestion((prev) =>
+          Math.min(prev + 1, suggestions.length - 1),
+        );
+        return;
+      }
+      if (e.key === "ArrowUp") {
+        e.preventDefault();
+        setActiveSuggestion((prev) => Math.max(prev - 1, 0));
+        return;
+      }
+      if (e.key === "Enter" || e.key === "Tab") {
+        e.preventDefault();
+        applySuggestion(activeSuggestion);
+        return;
+      }
+      if (e.key === "Escape") {
+        setShowSuggestions(false);
+        return;
+      }
     }
   };
+
+  // ── Suggestion logic ──
+  const updateSuggestions = useCallback(() => {
+    const el = queryRef.current;
+    if (!el || !fields.length) return;
+
+    const cursor = el.selectionStart ?? localQuery.length;
+    const token = getTokenBeforeCursor(localQuery, cursor);
+
+    if (token.length < 1) {
+      setShowSuggestions(false);
+      return;
+    }
+
+    const filtered = fields
+      .filter((f) => f.toLowerCase().includes(token.toLowerCase()))
+      .slice(0, 8);
+
+    if (filtered.length > 0) {
+      setSuggestions(filtered);
+      setActiveSuggestion(0);
+      setShowSuggestions(true);
+    } else {
+      setShowSuggestions(false);
+    }
+  }, [localQuery, fields]);
+
+  const applySuggestion = (index: number) => {
+    const el = queryRef.current;
+    if (!el) return;
+
+    const field = suggestions[index];
+    if (!field) return;
+
+    const cursor = el.selectionStart ?? localQuery.length;
+    const token = getTokenBeforeCursor(localQuery, cursor);
+    const replacement = `"${field}": `;
+
+    const { text: newText, cursor: newCursor } = replaceTokenAtCursor(
+      localQuery,
+      cursor,
+      token,
+      replacement,
+    );
+
+    setLocalQuery(newText);
+    setShowSuggestions(false);
+    validateQuery(newText);
+
+    // Restore focus and cursor after React re-render
+    requestAnimationFrame(() => {
+      if (queryRef.current) {
+        queryRef.current.focus();
+        queryRef.current.setSelectionRange(newCursor, newCursor);
+      }
+    });
+  };
+
+  useEffect(() => {
+    updateSuggestions();
+  }, [updateSuggestions]);
+
+  // Click outside to close suggestions
+  useEffect(() => {
+    const onClick = (e: MouseEvent) => {
+      if (
+        suggestionsRef.current?.contains(e.target as Node) ||
+        queryRef.current?.contains(e.target as Node)
+      ) {
+        return;
+      }
+      setShowSuggestions(false);
+    };
+    document.addEventListener("mousedown", onClick);
+    return () => document.removeEventListener("mousedown", onClick);
+  }, []);
 
   const isFirstPage = pagination.currentPage <= 1;
   const isLastPage = pagination.currentPage >= pagination.totalPages;
@@ -184,11 +336,12 @@ export function DocumentsToolbar({
     localProject !== "{}" ||
     localSort !== "{}" ||
     localSkip !== "" ||
+    localQueryLimit !== "" ||
     localMaxTime !== "" ||
     localQuery !== "{}";
 
   return (
-    <div className="space-y-0 rounded-lg border border-gray-200 bg-white overflow-hidden">
+    <div className="space-y-0 rounded-lg border border-gray-200 bg-white overflow-hidden shadow-sm">
       {/* ── Top Query Bar ── */}
       <div className="flex items-center gap-2 px-3 py-2">
         {/* History dropdown */}
@@ -236,14 +389,26 @@ export function DocumentsToolbar({
         </Button>
 
         {/* Find — green */}
-        <Button
-          size="sm"
-          onClick={handleFind}
-          className="h-7 text-xs gap-1 bg-green-700 hover:bg-green-800 text-white"
-        >
-          <Play className="h-3 w-3" />
-          Find
-        </Button>
+        <TooltipProvider>
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <span>
+                <Button
+                  size="sm"
+                  onClick={handleFind}
+                  disabled={!queryValid}
+                  className="h-7 text-xs gap-1 bg-green-700 hover:bg-green-800 text-white disabled:opacity-50 disabled:cursor-not-allowed"
+                >
+                  <Play className="h-3 w-3" />
+                  Find
+                </Button>
+              </span>
+            </TooltipTrigger>
+            {!queryValid && (
+              <TooltipContent side="bottom">Fix query syntax to enable Find</TooltipContent>
+            )}
+          </Tooltip>
+        </TooltipProvider>
 
         {/* Export to Language */}
         <Button
@@ -268,10 +433,11 @@ export function DocumentsToolbar({
         </button>
       </div>
 
-      {/* ── Query input ── */}
-      <div className="px-3 pb-2">
+      {/* ── Query input with suggestions ── */}
+      <div className="px-3 pb-2 relative">
         <div className="relative">
           <Textarea
+            ref={queryRef}
             value={localQuery}
             onChange={(e) => {
               setLocalQuery(e.target.value);
@@ -285,31 +451,52 @@ export function DocumentsToolbar({
               }
             }}
             onKeyDown={handleKeyDown}
+            onClick={updateSuggestions}
             placeholder="Type a query: { field: 'value' }"
-            className={`font-mono text-sm min-h-[32px] max-h-[120px] resize-y py-1.5 px-3 ${
-              optionErrors.query || !queryValid
-                ? "border-red-400 focus:border-red-400 focus:ring-red-100"
-                : "border-gray-200"
-            }`}
+            className="font-mono text-sm min-h-[32px] max-h-[120px] resize-y py-1.5 px-3 border-gray-200 placeholder:text-gray-300"
             rows={1}
           />
+
+          {/* Suggestion dropdown */}
+          {showSuggestions && suggestions.length > 0 && (
+            <div
+              ref={suggestionsRef}
+              className="absolute left-0 right-0 top-full mt-1 z-50 bg-white border border-gray-200 rounded-md shadow-lg max-h-48 overflow-y-auto"
+            >
+              <div className="py-1">
+                {suggestions.map((field, i) => (
+                  <button
+                    key={field}
+                    type="button"
+                    onMouseEnter={() => setActiveSuggestion(i)}
+                    onClick={() => applySuggestion(i)}
+                    className={`w-full text-left px-3 py-1.5 text-sm font-mono transition-colors ${
+                      i === activeSuggestion
+                        ? "bg-blue-50 text-blue-700"
+                        : "text-gray-700 hover:bg-gray-50"
+                    }`}
+                  >
+                    {field}
+                  </button>
+                ))}
+              </div>
+              <div className="px-3 py-1 border-t border-gray-100 text-[10px] text-gray-400 bg-gray-50/50">
+                ↑↓ to navigate · Enter or Tab to insert · Esc to close
+              </div>
+            </div>
+          )}
         </div>
-        {(optionErrors.query || !queryValid) && (
-          <p className="text-red-500 text-xs mt-1">
-            {optionErrors.query || "Invalid JSON query syntax"}
-          </p>
-        )}
       </div>
 
       {/* ── Options Panel ── */}
       {showOptions && (
         <div className="border-t border-gray-100 px-3 py-3 space-y-3">
-          {/* Project */}
-          <div className="flex items-start gap-3">
-            <label className="w-28 shrink-0 pt-1.5 text-xs font-semibold text-foreground text-right">
-              Project
-            </label>
-            <div className="flex-1">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+            {/* Project */}
+            <div className="space-y-1.5">
+              <label className="text-xs font-semibold text-foreground">
+                Project
+              </label>
               <Textarea
                 value={localProject}
                 onChange={(e) => {
@@ -323,25 +510,23 @@ export function DocumentsToolbar({
                   }
                 }}
                 placeholder="{ field: 0 }"
-                className={`font-mono text-sm min-h-[28px] max-h-[80px] resize-y py-1.5 px-3 ${
-                  optionErrors.project ? "border-red-400 focus:border-red-400" : "border-gray-200"
+                className={`font-mono text-sm min-h-[28px] max-h-[80px] resize-y py-1.5 px-3 placeholder:text-gray-300 ${
+                  optionErrors.project
+                    ? "border-red-400 focus:border-red-400"
+                    : "border-gray-200"
                 }`}
                 rows={1}
               />
               {optionErrors.project && (
-                <p className="text-red-500 text-xs mt-0.5">
-                  {optionErrors.project}
-                </p>
+                <p className="text-red-500 text-xs">{optionErrors.project}</p>
               )}
             </div>
-          </div>
 
-          {/* Sort */}
-          <div className="flex items-start gap-3">
-            <label className="w-28 shrink-0 pt-1.5 text-xs font-semibold text-foreground text-right">
-              Sort
-            </label>
-            <div className="flex-1">
+            {/* Sort */}
+            <div className="space-y-1.5">
+              <label className="text-xs font-semibold text-foreground">
+                Sort
+              </label>
               <Textarea
                 value={localSort}
                 onChange={(e) => {
@@ -354,22 +539,80 @@ export function DocumentsToolbar({
                     });
                   }
                 }}
-                placeholder="{ field: -1 } or [['field', -1]]"
-                className={`font-mono text-sm min-h-[28px] max-h-[80px] resize-y py-1.5 px-3 ${
-                  optionErrors.sort ? "border-red-400 focus:border-red-400" : "border-gray-200"
+                placeholder="{ field: -1 }"
+                className={`font-mono text-sm min-h-[28px] max-h-[80px] resize-y py-1.5 px-3 placeholder:text-gray-300 ${
+                  optionErrors.sort
+                    ? "border-red-400 focus:border-red-400"
+                    : "border-gray-200"
                 }`}
                 rows={1}
               />
               {optionErrors.sort && (
-                <p className="text-red-500 text-xs mt-0.5">
-                  {optionErrors.sort}
-                </p>
+                <p className="text-red-500 text-xs">{optionErrors.sort}</p>
+              )}
+            </div>
+          </div>
+
+          {/* Skip / Limit / Max Time row */}
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+            <div className="space-y-1.5">
+              <label className="text-xs font-semibold text-foreground">
+                Skip
+              </label>
+              <Input
+                type="number"
+                min={0}
+                value={localSkip}
+                onChange={(e) => {
+                  setLocalSkip(e.target.value);
+                  if (optionErrors.skip) {
+                    setOptionErrors((prev) => {
+                      const next = { ...prev };
+                      delete next.skip;
+                      return next;
+                    });
+                  }
+                }}
+                placeholder="0"
+                className={`font-mono text-sm h-8 py-1 px-2 placeholder:text-gray-300 ${
+                  optionErrors.skip ? "border-red-400" : "border-gray-200"
+                }`}
+              />
+              {optionErrors.skip && (
+                <p className="text-red-500 text-xs">{optionErrors.skip}</p>
               )}
             </div>
 
-            {/* Right side: Max Time MS */}
-            <div className="w-40 shrink-0 flex items-start gap-2">
-              <label className="text-xs font-semibold text-foreground pt-1.5 whitespace-nowrap">
+            <div className="space-y-1.5">
+              <label className="text-xs font-semibold text-foreground">
+                Limit
+              </label>
+              <Input
+                type="number"
+                min={1}
+                value={localQueryLimit}
+                onChange={(e) => {
+                  setLocalQueryLimit(e.target.value);
+                  if (optionErrors.limit) {
+                    setOptionErrors((prev) => {
+                      const next = { ...prev };
+                      delete next.limit;
+                      return next;
+                    });
+                  }
+                }}
+                placeholder="100"
+                className={`font-mono text-sm h-8 py-1 px-2 placeholder:text-gray-300 ${
+                  optionErrors.limit ? "border-red-400" : "border-gray-200"
+                }`}
+              />
+              {optionErrors.limit && (
+                <p className="text-red-500 text-xs">{optionErrors.limit}</p>
+              )}
+            </div>
+
+            <div className="space-y-1.5">
+              <label className="text-xs font-semibold text-foreground">
                 Max Time MS
               </label>
               <Input
@@ -387,60 +630,13 @@ export function DocumentsToolbar({
                   }
                 }}
                 placeholder="60000"
-                className={`font-mono text-sm h-8 py-1 px-2 ${
+                className={`font-mono text-sm h-8 py-1 px-2 placeholder:text-gray-300 ${
                   optionErrors.maxTimeMS ? "border-red-400" : "border-gray-200"
                 }`}
               />
-            </div>
-          </div>
-
-          {/* Skip + Limit row */}
-          <div className="flex items-start gap-3">
-            <div className="w-28 shrink-0" />{/* spacer for label column */}
-            <div className="flex-1" />
-            <div className="flex items-start gap-4">
-              <div className="w-28 shrink-0 flex items-start gap-2">
-                <label className="text-xs font-semibold text-foreground pt-1.5 whitespace-nowrap">
-                  Skip
-                </label>
-                <Input
-                  type="number"
-                  min={0}
-                  value={localSkip}
-                  onChange={(e) => {
-                    setLocalSkip(e.target.value);
-                    if (optionErrors.skip) {
-                      setOptionErrors((prev) => {
-                        const next = { ...prev };
-                        delete next.skip;
-                        return next;
-                      });
-                    }
-                  }}
-                  placeholder="0"
-                  className={`font-mono text-sm h-8 py-1 px-2 ${
-                    optionErrors.skip ? "border-red-400" : "border-gray-200"
-                  }`}
-                />
-                {optionErrors.skip && (
-                  <p className="text-red-500 text-xs mt-0.5">
-                    {optionErrors.skip}
-                  </p>
-                )}
-              </div>
-              <div className="w-28 shrink-0 flex items-start gap-2">
-                <label className="text-xs font-semibold text-foreground pt-1.5 whitespace-nowrap">
-                  Limit
-                </label>
-                <Input
-                  type="number"
-                  min={1}
-                  value={localLimit}
-                  onChange={(e) => setLocalLimit(e.target.value)}
-                  placeholder="0"
-                  className="font-mono text-sm h-8 py-1 px-2 border-gray-200"
-                />
-              </div>
+              {optionErrors.maxTimeMS && (
+                <p className="text-red-500 text-xs">{optionErrors.maxTimeMS}</p>
+              )}
             </div>
           </div>
         </div>
@@ -552,7 +748,7 @@ export function DocumentsToolbar({
             </Button>
           </div>
 
-          {/* View mode toggle — Compass icons */}
+          {/* View mode toggle */}
           <div className="flex items-center rounded-md border border-gray-300 overflow-hidden">
             <button
               type="button"

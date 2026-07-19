@@ -35,7 +35,7 @@ export function FilterDocuments({
     field.toLowerCase().includes(searchField.toLowerCase()),
   );
 
-  // Validate JSON query
+  // Validate query (supports MongoDB shell syntax with unquoted keys)
   const validateQuery = (queryString: string) => {
     const error = validateQueryString(queryString);
     setIsValidQuery(!error);
@@ -128,7 +128,7 @@ export function FilterDocuments({
               <Textarea
                 value={query}
                 onChange={(e) => handleQueryChange(e.target.value)}
-                placeholder='{"field": "value"}'
+                placeholder='{ field: "value" }'
                 className={`font-mono text-sm min-h-[280px] resize-none ${
                   !isValidQuery ? "border-red-500 focus:border-red-500" : ""
                 }`}
@@ -146,11 +146,11 @@ export function FilterDocuments({
                 {[
                   {
                     label: "Text contains",
-                    value: '{"name": {"$regex": "John", "$options": "i"}}',
+                    value: '{ name: { $regex: "John", $options: "i" } }',
                   },
-                  { label: "Greater than", value: '{"age": {"$gt": 25}}' },
-                  { label: "Exact match", value: '{"status": "active"}' },
-                  { label: "Boolean", value: '{"isPublished": true}' },
+                  { label: "Greater than", value: '{ age: { $gt: 25 } }' },
+                  { label: "Exact match", value: '{ status: "active" }' },
+                  { label: "Boolean", value: '{ isPublished: true }' },
                 ].map((example) => (
                   <button
                     key={example.label}
@@ -209,6 +209,7 @@ export function FilterDocuments({
               </p>
               <ul className="space-y-1 ml-2">
                 <li>• Click fields to insert them</li>
+                <li>• Keys can be unquoted: &#123; name: "John" &#125;</li>
                 <li>• Use MongoDB query syntax</li>
                 <li>• $regex for text search</li>
                 <li>• $gt, $lt for numbers</li>

@@ -99,7 +99,9 @@ export default function AppPage() {
     try {
       const response = await testMongoConnection(mongoUrl);
 
-      if (!response.success) {
+      if (!response || typeof response !== "object") {
+        setValidationError("Server returned an invalid response. Please try again.");
+      } else if (!response.success) {
         setValidationError(response?.message || "Something went wrong");
       } else {
         const addedConnection = StorageManager.addConnection(mongoUrl);

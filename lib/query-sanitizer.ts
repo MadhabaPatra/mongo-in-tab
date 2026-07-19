@@ -90,8 +90,11 @@ export function sanitizeQuery(
   return result;
 }
 
+import { parseMongoQuery } from "./mongo-query-parser";
+
 /**
  * Validate and parse a MongoDB query string.
+ * Supports MongoDB shell syntax (unquoted keys, single quotes).
  * Returns the sanitized query object or throws QuerySanitizationError.
  */
 export function parseAndSanitizeQuery(queryString: string): Record<string, unknown> {
@@ -99,15 +102,11 @@ export function parseAndSanitizeQuery(queryString: string): Record<string, unkno
     return {};
   }
 
-  let parsed: unknown;
+  let parsed: Record<string, unknown>;
   try {
-    parsed = JSON.parse(queryString);
-  } catch {
-    throw new QuerySanitizationError("Invalid JSON format in query string");
-  }
-
-  if (parsed === null || typeof parsed !== "object" || Array.isArray(parsed)) {
-    throw new QuerySanitizationError("Query must be a JSON object, not an array or primitive");
+    parsed = parseMongoQuery(queryString);
+  } catch (err: any) {
+    throw new QuerySanitizationError(err?.message || "Invalid query syntax");
   }
 
   return sanitizeQuery(parsed) as Record<string, unknown>;

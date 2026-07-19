@@ -49,6 +49,7 @@ interface DocumentQueryOptions {
   project?: string;
   sort?: string;
   skip?: number;
+  limit?: number;
   maxTimeMS?: number;
 }
 
