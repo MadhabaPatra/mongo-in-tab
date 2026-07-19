@@ -187,6 +187,13 @@ export default function DocumentsContent() {
     });
   };
 
+  const handleReset = () => {
+    setMongoQuery("{}");
+    setQueryOptions({});
+    setLimit(25);
+    loadDocuments(25, 1);
+  };
+
   // Prevent hydration mismatch: show loading skeleton until mounted
   if (!mounted) {
     return (
@@ -244,6 +251,7 @@ export default function DocumentsContent() {
             query={mongoQuery}
             onQueryChange={setMongoQuery}
             onRunQuery={() => loadDocuments(limit, 1)}
+            onReset={handleReset}
             options={queryOptions}
             onOptionsChange={setQueryOptions}
             pagination={pagination}
