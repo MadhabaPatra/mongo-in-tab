@@ -27,6 +27,7 @@ import {
   Clock,
   Download,
   Pencil,
+  Sparkles,
 } from "lucide-react";
 import {
   DropdownMenu,
@@ -211,14 +212,15 @@ export function DocumentsToolbar({
 
         <div className="flex-1" />
 
-        {/* Explain */}
+        {/* Generate query */}
         <Button
           variant="outline"
           size="sm"
-          onClick={() => toast.info("Explain Plan coming soon")}
+          onClick={() => toast.info("Query generation coming soon")}
           className="h-7 text-xs gap-1"
         >
-          Explain
+          <Sparkles className="h-3.5 w-3.5 text-green-600" />
+          Generate query
         </Button>
 
         {/* Reset */}
