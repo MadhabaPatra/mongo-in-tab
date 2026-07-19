@@ -1,8 +1,7 @@
 "use client";
 
-import { useState, useMemo } from "react";
-import { Button } from "@/components/ui/button";
-import { Copy, FileJson } from "lucide-react";
+import { useState } from "react";
+import { Copy } from "lucide-react";
 import { copyToClipboard } from "@/lib/utils";
 import { toast } from "sonner";
 import { JsonTree } from "./json-tree";
@@ -14,10 +13,6 @@ interface DocumentsJsonViewProps {
 export function DocumentsJsonView({ documents }: DocumentsJsonViewProps) {
   const [copiedIndex, setCopiedIndex] = useState<number | null>(null);
 
-  const allJson = useMemo(() => {
-    return documents.map((d) => JSON.stringify(d, null, 2)).join("\n\n");
-  }, [documents]);
-
   const handleCopyDoc = (json: string, index: number) => {
     copyToClipboard(json);
     setCopiedIndex(index);
@@ -27,28 +22,6 @@ export function DocumentsJsonView({ documents }: DocumentsJsonViewProps) {
 
   return (
     <div className="space-y-3">
-      {/* Header */}
-      <div className="flex items-center justify-between">
-        <div className="flex items-center gap-2 text-sm text-gray-500">
-          <FileJson className="h-4 w-4" />
-          <span>
-            {documents.length} document{documents.length !== 1 ? "s" : ""} in
-            EJSON format
-          </span>
-        </div>
-        <Button
-          variant="outline"
-          size="sm"
-          onClick={() => {
-            copyToClipboard(allJson);
-            toast.success("All documents copied to clipboard");
-          }}
-        >
-          <Copy className="h-3.5 w-3.5 mr-1.5" />
-          Copy All
-        </Button>
-      </div>
-
       {/* Document cards */}
       <div className="space-y-2">
         {documents.map((doc, index) => {
