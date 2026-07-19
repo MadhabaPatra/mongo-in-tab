@@ -25,15 +25,6 @@ import {
   Trash2,
   RotateCw,
   Clock,
-  Star,
-  History,
-  Filter,
-  ArrowUpDown,
-  Eye,
-  SkipForward,
-  Timer,
-  Wrench,
-  Sparkles,
   Download,
   Pencil,
 } from "lucide-react";
@@ -92,7 +83,7 @@ export function DocumentsToolbar({
   const [optionErrors, setOptionErrors] = useState<Record<string, string>>({});
 
   // Options panel visibility — Compass shows options inline under the query bar
-  const [showOptions, setShowOptions] = useState(true);
+  const [showOptions, setShowOptions] = useState(false);
 
   useEffect(() => {
     setLocalQuery(query);
@@ -218,20 +209,6 @@ export function DocumentsToolbar({
           </DropdownMenuContent>
         </DropdownMenu>
 
-        {/* Hint text */}
-        <div className="hidden sm:flex items-center gap-1 text-xs text-muted-foreground mr-1">
-          <span>Type a query:</span>
-          <code className="text-[11px] font-mono bg-muted px-1 rounded">{"{ field: 'value' }"}</code>
-          <span>or</span>
-          <button
-            onClick={() => toast.info("Query generation coming soon")}
-            className="text-green-700 font-medium hover:underline"
-          >
-            Generate query
-          </button>
-          <Sparkles className="h-3 w-3 text-green-600" />
-        </div>
-
         <div className="flex-1" />
 
         {/* Explain */}
@@ -305,7 +282,7 @@ export function DocumentsToolbar({
               }
             }}
             onKeyDown={handleKeyDown}
-            placeholder="{ }"
+            placeholder="Type a query: { field: 'value' }"
             className={`font-mono text-sm min-h-[32px] max-h-[120px] resize-y py-1.5 px-3 ${
               optionErrors.query || !queryValid
                 ? "border-red-400 focus:border-red-400 focus:ring-red-100"
