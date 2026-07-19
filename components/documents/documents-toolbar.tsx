@@ -257,6 +257,7 @@ export function DocumentsToolbar({
 
         {/* Options toggle */}
         <button
+          type="button"
           onClick={() => setShowOptions((s) => !s)}
           className="flex items-center gap-0.5 text-xs text-blue-600 hover:text-blue-700 font-medium px-1.5 py-1 rounded hover:bg-blue-50 transition-colors"
         >
@@ -555,6 +556,7 @@ export function DocumentsToolbar({
           {/* View mode toggle — Compass icons */}
           <div className="flex items-center rounded-md border border-gray-300 overflow-hidden">
             <button
+              type="button"
               onClick={() => onViewModeChange("table")}
               className={`flex items-center gap-1 px-2.5 py-1 text-xs transition-colors ${
                 viewMode === "table"
@@ -565,6 +567,7 @@ export function DocumentsToolbar({
               <List className="h-3.5 w-3.5" />
             </button>
             <button
+              type="button"
               onClick={() => onViewModeChange("json")}
               className={`flex items-center gap-1 px-2.5 py-1 text-xs transition-colors border-l border-gray-300 ${
                 viewMode === "json"
@@ -575,6 +578,7 @@ export function DocumentsToolbar({
               <span className="font-mono text-[10px] leading-none">{"{}"}</span>
             </button>
             <button
+              type="button"
               onClick={() => onViewModeChange("card")}
               className={`flex items-center gap-1 px-2.5 py-1 text-xs transition-colors border-l border-gray-300 ${
                 viewMode === "card"
