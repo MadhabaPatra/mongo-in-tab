@@ -1,17 +1,19 @@
 "use client";
 
 import { Button } from "@/components/ui/button";
-import { Copy, Edit, FileText, Hash, X, Database, Eye } from "lucide-react";
+import { Copy, Edit, X, Database, Eye, ChevronRight, ChevronDown, Trash2 } from "lucide-react";
 import {
   Tooltip,
   TooltipContent,
   TooltipProvider,
   TooltipTrigger,
 } from "@/components/ui/tooltip";
-import { copyToClipboard, getFieldType, getEJSONValue } from "@/lib/utils";
+import { copyToClipboard, getEJSONValue } from "@/lib/utils";
 import { toast } from "sonner";
 import { useState } from "react";
 import EditDocument from "@/components/documents/edit-documents";
+import { DocumentCompactTree } from "./document-compact-tree";
+import { JsonTree } from "./json-tree";
 
 interface DocumentsCardViewProps {
   connectionId: string;
@@ -26,7 +28,6 @@ export function DocumentsCardView({
   connectionId,
   database,
   collectionName,
-  fields,
   documents,
   onLoadDocuments,
 }: DocumentsCardViewProps) {
@@ -35,6 +36,7 @@ export function DocumentsCardView({
   );
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [editDocumentOpen, setEditDocumentOpen] = useState(false);
+  const [collapsedCards, setCollapsedCards] = useState<Set<number>>(new Set());
 
   const handleOpenJsonSidebar = (doc: IDocument) => {
     setSidebarDocument(doc);
@@ -46,227 +48,139 @@ export function DocumentsCardView({
     setEditDocumentOpen(true);
   };
 
-  const renderCellValue = (value: any, field: string) => {
-    const fieldType = getFieldType(value);
-
-    if (value === null || value === undefined) {
-      return <span className="text-gray-400 italic text-sm">null</span>;
-    }
-
-    // Extract plain value from EJSON
-    const displayValue = getEJSONValue(value);
-
-    if (typeof displayValue === "boolean") {
-      return (
-        <span
-          className={`font-medium text-sm px-2 py-1 rounded-full ${
-            displayValue ? "bg-green-100 text-green-700" : "bg-red-100 text-red-700"
-          }`}
-        >
-          {displayValue.toString()}
-        </span>
-      );
-    }
-
-    if (typeof displayValue === "string") {
-      if (fieldType === "objectid") {
-        return (
-          <span className="font-mono text-xs bg-blue-50 text-blue-700 px-2 py-1 rounded">
-            {displayValue.length > 20
-              ? `${displayValue.slice(0, 8)}...${displayValue.slice(-8)}`
-              : displayValue}
-          </span>
-        );
+  const toggleCard = (index: number) => {
+    setCollapsedCards((prev) => {
+      const next = new Set(prev);
+      if (next.has(index)) {
+        next.delete(index);
+      } else {
+        next.add(index);
       }
-      if (fieldType === "date") {
-        return (
-          <span className="text-green-600 text-sm">
-            {new Date(displayValue).toLocaleString()}
-          </span>
-        );
-      }
-
-      const isLongText = displayValue.length > 30;
-      const truncated = isLongText
-        ? displayValue.slice(0, 30) + "..."
-        : displayValue;
-
-      return <span className="text-sm text-gray-700">{truncated}</span>;
-    }
-
-    if (typeof displayValue === "number") {
-      return <span className="font-mono text-sm text-gray-700">{displayValue}</span>;
-    }
-
-    if (Array.isArray(displayValue)) {
-      return (
-        <div className="flex items-center gap-2">
-          <span className="text-xs bg-purple-100 text-purple-700 px-2 py-1 rounded">
-            Array[{displayValue.length}]
-          </span>
-        </div>
-      );
-    }
-
-    if (displayValue !== null && typeof displayValue === "object") {
-      const keys = Object.keys(displayValue);
-      return (
-        <div className="flex items-center gap-2">
-          <span className="text-xs bg-orange-100 text-orange-700 px-2 py-1 rounded">
-            Object[{keys.length}]
-          </span>
-        </div>
-      );
-    }
-
-    return (
-      <span className="font-mono text-sm text-gray-700">{String(displayValue)}</span>
-    );
-  };
-
-  // Get the most important fields to display prominently
-  const getKeyFields = (doc: IDocument) => {
-    const keyFields: string[] = [];
-
-    const priorityFields = [
-      "name",
-      "title",
-      "email",
-      "username",
-      "status",
-      "type",
-    ];
-
-    for (const field of priorityFields) {
-      if (doc[field] !== undefined && doc[field] !== null) {
-        keyFields.push(field);
-        if (keyFields.length >= 2) break;
-      }
-    }
-
-    // If we don't have enough priority fields, add others
-    for (const field of fields) {
-      if (!keyFields.includes(field) && keyFields.length < 3) {
-        keyFields.push(field);
-      }
-    }
-
-    return keyFields;
+      return next;
+    });
   };
 
   return (
     <div className="space-y-4">
       {/* Cards Grid */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
+      <div className="grid grid-cols-1 gap-6">
         {documents.map((doc, index) => {
-          const keyFields = getKeyFields(doc);
+          const isCollapsed = collapsedCards.has(index);
+          const docKeys = Object.keys(doc);
 
           return (
             <div
               key={index}
-              className="bg-white border border-gray-200 rounded-lg shadow-sm hover:shadow-md transition-all duration-200 cursor-pointer group"
-              onClick={() => handleOpenJsonSidebar(doc)}
+              className="bg-white border border-gray-200 rounded-lg hover:shadow-md transition-shadow duration-200 group"
             >
               {/* Card Header */}
-              <div className="px-4 py-3 border-b border-gray-100 bg-gray-50/50">
-                <div className="flex items-center justify-between">
-                  <div className="flex items-center gap-2">
-                    <span className="text-xs text-gray-500 font-medium">
-                      #{index + 1}
-                    </span>
-                  </div>
-                  <div className="flex items-center gap-1">
-                    <TooltipProvider>
-                      <Tooltip>
-                        <TooltipTrigger asChild>
-                          <Button
-                            variant="ghost"
-                            size="sm"
-                            className="h-6 w-6 p-0 opacity-0 group-hover:opacity-100 transition-opacity"
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              handleEditDocument(doc);
-                            }}
-                          >
-                            <Edit className="h-3 w-3" />
-                          </Button>
-                        </TooltipTrigger>
-                        <TooltipContent>
-                          <p>Edit document</p>
-                        </TooltipContent>
-                      </Tooltip>
-                    </TooltipProvider>
-                    <TooltipProvider>
-                      <Tooltip>
-                        <TooltipTrigger asChild>
-                          <Button
-                            variant="ghost"
-                            size="sm"
-                            className="h-6 w-6 p-0 opacity-0 group-hover:opacity-100 transition-opacity"
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              handleOpenJsonSidebar(doc);
-                            }}
-                          >
-                            <Eye className="h-3 w-3" />
-                          </Button>
-                        </TooltipTrigger>
-                        <TooltipContent>
-                          <p>View JSON</p>
-                        </TooltipContent>
-                      </Tooltip>
-                    </TooltipProvider>
-                  </div>
+              <div className="flex items-center justify-between px-3 py-2 border-b border-gray-100 bg-gray-50/50">
+                <div className="flex items-center gap-2">
+                  <button
+                    type="button"
+                    onClick={() => toggleCard(index)}
+                    className="shrink-0 inline-flex items-center justify-center w-4 h-4 text-gray-400 hover:text-gray-600 transition-colors cursor-pointer"
+                  >
+                    {isCollapsed ? (
+                      <ChevronRight className="h-3.5 w-3.5" />
+                    ) : (
+                      <ChevronDown className="h-3.5 w-3.5" />
+                    )}
+                  </button>
+                  <span className="text-[10px] text-gray-400 font-mono">
+                    #{index + 1}
+                  </span>
                 </div>
-
-                {/* Document ID */}
-                <TooltipProvider>
-                  <Tooltip>
-                    <TooltipTrigger asChild>
-                      <code
-                        className="text-xs font-mono text-gray-600 cursor-pointer hover:text-blue-600 transition-colors mt-1 block"
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          const id = String(getEJSONValue(doc._id) ?? "");
-                          if (id) {
-                            copyToClipboard(id);
-                            toast.success("Document ID copied");
-                          }
-                        }}
-                      >
-                        {String(getEJSONValue(doc._id) ?? "").slice(0, 8)}...{String(getEJSONValue(doc._id) ?? "").slice(-4)}
-                      </code>
-                    </TooltipTrigger>
-                    <TooltipContent>
-                      <p>Click to copy ID</p>
-                    </TooltipContent>
-                  </Tooltip>
-                </TooltipProvider>
+                <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                  <TooltipProvider>
+                    <Tooltip>
+                      <TooltipTrigger asChild>
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          className="h-6 w-6 p-0 text-gray-400 hover:text-gray-700"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            handleEditDocument(doc);
+                          }}
+                        >
+                          <Edit className="h-3 w-3" />
+                        </Button>
+                      </TooltipTrigger>
+                      <TooltipContent>Edit</TooltipContent>
+                    </Tooltip>
+                  </TooltipProvider>
+                  <TooltipProvider>
+                    <Tooltip>
+                      <TooltipTrigger asChild>
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          className="h-6 w-6 p-0 text-gray-400 hover:text-gray-700"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            copyToClipboard(JSON.stringify(doc, null, 2));
+                            toast.success("Document copied to clipboard");
+                          }}
+                        >
+                          <Copy className="h-3 w-3" />
+                        </Button>
+                      </TooltipTrigger>
+                      <TooltipContent>Copy</TooltipContent>
+                    </Tooltip>
+                  </TooltipProvider>
+                  <TooltipProvider>
+                    <Tooltip>
+                      <TooltipTrigger asChild>
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          className="h-6 w-6 p-0 text-gray-400 hover:text-red-600"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            toast.info("Delete coming soon");
+                          }}
+                        >
+                          <Trash2 className="h-3 w-3" />
+                        </Button>
+                      </TooltipTrigger>
+                      <TooltipContent>Delete</TooltipContent>
+                    </Tooltip>
+                  </TooltipProvider>
+                  <TooltipProvider>
+                    <Tooltip>
+                      <TooltipTrigger asChild>
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          className="h-6 w-6 p-0 text-gray-400 hover:text-gray-700"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            handleOpenJsonSidebar(doc);
+                          }}
+                        >
+                          <Eye className="h-3 w-3" />
+                        </Button>
+                      </TooltipTrigger>
+                      <TooltipContent>JSON</TooltipContent>
+                    </Tooltip>
+                  </TooltipProvider>
+                </div>
               </div>
 
-              {/* Card Content */}
-              <div className="p-4 space-y-3">
-                {/* Key Fields */}
-                {keyFields.map((field) => (
-                  <div key={field} className="space-y-1">
-                    <label className="text-xs font-medium text-gray-500 uppercase tracking-wide">
-                      {field}
-                    </label>
-                    <div className="min-h-[20px]">
-                      {renderCellValue(doc[field], field)}
-                    </div>
-                  </div>
-                ))}
-
-                {/* Additional fields indicator */}
-                {fields.length > keyFields.length && (
-                  <div className="pt-2 border-t border-gray-100">
-                    <span className="text-xs text-gray-400">
-                      +{fields.length - keyFields.length} more fields
-                    </span>
-                  </div>
-                )}
-              </div>
+              {/* Body — full tree or compact summary */}
+              {isCollapsed ? (
+                <div className="px-3 py-2 font-mono text-xs text-gray-500">
+                  {String(getEJSONValue(doc._id) ?? "").slice(0, 8)}...{String(getEJSONValue(doc._id) ?? "").slice(-4)}
+                  <span className="text-gray-400 ml-2">
+                    {docKeys.length} fields
+                  </span>
+                </div>
+              ) : (
+                <div className="px-3 py-2">
+                  <DocumentCompactTree data={doc} />
+                </div>
+              )}
             </div>
           );
         })}
@@ -338,9 +252,7 @@ export function DocumentsCardView({
             {/* Content */}
             <div className="flex-1 overflow-auto p-6">
               <div className="bg-gray-50/50 rounded-lg p-4 border border-gray-100">
-                <pre className="text-sm font-mono whitespace-pre-wrap text-gray-800 leading-6">
-                  {JSON.stringify(sidebarDocument, null, 2)}
-                </pre>
+                <JsonTree data={sidebarDocument} />
               </div>
             </div>
           </div>
